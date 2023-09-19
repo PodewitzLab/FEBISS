@@ -10,6 +10,8 @@ from warnings import warn
 import glob
 import os
 import subprocess
+import sys
+from .io_handling import Input
 
 from febiss import SETTINGS
 
@@ -31,9 +33,14 @@ class UnsuccessfulAnalysisException(Exception):
 
 
 class GistAnalyser:
-    def __init__(self, **kwargs):
-        self._set_defaults()
+    def __init__(self, water=False, tip3p=False, **kwargs):
+        self._set_defaults(water,tip3p)
         self.required_keys = {'top', 'trajectory_name'}
+        if not self.tip3p:
+            self.required_keys.update(['refdens', 'char_angle'])
+        if not self.water:
+            self.required_keys.update(
+                ['rigid_atom_0','rigid_atom_1','rigid_atom_2'])
         for key in self.required_keys:
             if key not in kwargs.keys():
                 raise MissingSettingException(
@@ -41,29 +48,33 @@ class GistAnalyser:
         self.__dict__.update((key, kwargs[key]) for key in self.required_keys)
         self.allowed_keys = {'frame_selection', 'grid_center', 'trajectory_format', 'grid_spacing', 'grid_lengths',
                              'refdens', 'solute_residues', 'cpptraj_command_file', 'gist_out_file', 'rdf', 'rdf_names',
-                             'gist_grid_file', 'water_angle'}
+                             'gist_grid_file', 'char_angle', 'solv_abb', 'solv_top', 'rigid_atom_0','rigid_atom_1','rigid_atom_2'}
         self.__dict__.update((k, v) for k, v in kwargs.items() if k in self.allowed_keys)
+        if not self.tip3p:
+            self.allowed_keys.difference_update(
+                ['refdens', 'char_angle'])
+        if not self.water and self.tip3p:
+            self.allowed_keys.difference_update(['solv_top', 'solv_abb','solv_size','rigid_atom_0','rigid_atom_1','rigid_atom_2'])
+
+
 
     def perform_gist_analysis(self):
-        if os.path.exists('febiss-waters.pdb'):
-            warn("WARNING: 'febiss-waters.pdb' is already present in directory.")
+        if os.path.exists('febiss-solvents.pdb'):
+            warn("WARNING: 'febiss-solvents.pdb' is already present in directory.")
             while True:
-                inp = input("Do you want to analyze the trajectory again? [y/n] ")
-                if inp == 'y' or inp == 'Y' or inp == 'yes' or inp == 'Yes' or inp == ' y':
+                if Input("Do you want to analyze the trajectory again? [y/n]").yn():
                     break
-                elif inp == 'n' or inp == 'N' or inp == 'no' or inp == 'No' or inp == ' n':
+                else:
                     print("Skipping analysis and reading existing data.")
                     return
-                else:
-                    print("Sorry wrong input, just 'y' or 'n'.")
         if self.rdf:
             self.perform_rdf_analysis()
         self._write_cpptraj_file()
         self._write_gist_input_line()
         self._execute_cpptraj()
-        if not os.path.exists('febiss-waters.pdb'):
+        if not os.path.exists('febiss-solvents.pdb'):
             raise UnsuccessfulAnalysisException(
-                "'febiss-waters.pdb' is not present, the CPPTRAJ analysis did not work.")
+                "'febiss-solvents.pdb' is not present, the CPPTRAJ analysis did not work.")
         self._write_out_gist_grid()
 
     def perform_rdf_analysis(self):
@@ -72,24 +83,36 @@ class GistAnalyser:
             self._write_rdf_input_line(value, key)
             self._execute_cpptraj()
 
-    def _set_defaults(self):
+    def _set_defaults(self,water,tip3p):
         self.top = None
         self.trajectory_name = None
+        self.water = water
+        self.tip3p = tip3p # set to true only if TIP3P water is used
+        self.solv_top = None #stores the name of the solvent topology
+        self.solv_abb = None #stores the abbreviation of the solvent molecule
+        self.solv_size = 3
+        self.rigid_atom_0 = 'O'
+        self.rigid_atom_1 = 'H'
+        self.rigid_atom_2 = 'H'
         self.frame_selection = None
         self.grid_center = None
         self.trajectory_format = "cdf"
         self.grid_spacing = 0.5
         self.grid_lengths = (60, 60, 60)
-        self.refdens = 0.0329  # tip3p
-        self.water_angle = 104.57  # tip3p
+        if self.water:
+            self.refdens = 0.0329  # tip3p
+            self.char_angle = 104.57  # tip3p
+        else:
+            self.refdens = None#Input("Provide reference density as float:\n", type=float)
+            self.char_angle = None#Input("Provide characteristic angle as float:\n", type=float)
         self.solute_residues = ':1'
         self.cpptraj_command_file = 'cpptraj.in'
         self.gist_out_file = 'gistout.dat'
         self.gist_grid_file = 'gist_grid.xyz'
         self.rdf = True
-        self.rdf_names = {'center2': 'center of solute', 'C': 'carbon', 'O': 'oxygen', 'N': 'nitrogen', 'P': 'phosphor'}
+        self.rdf_names = {'center2': 'center of solute', 'C': 'carbon', 'O': 'oxygen', 'N': 'nitrogen', 'P': 'phosphor'} #TODO: sense?
 
-    def _write_cpptraj_file(self):
+    def _write_cpptraj_file(self): #this creates the content for cpptraj.in
         self._sanity_check()
         with open(self.cpptraj_command_file, 'w') as f:
             f.write('parm ' + self.top + '\n')
@@ -98,10 +121,13 @@ class GistAnalyser:
                 # if not given CPPTRAJ uses all frames
                 f.write(' ' + self.frame_selection)
             f.write('\n')
+            if not self.water:
+                f.write('solvent' + self.solv_top + f':{self.solv_abb}\n')
             f.write('center ' + self.solute_residues + ' origin\n')
             f.write('image origin center familiar\n')
 
     def _sanity_check(self):
+        #TODO: typedict for other keys?
         if not os.path.exists(self.top):
             raise InvalidInputException('The given top file does not exist')
         elif len(glob.glob(self.trajectory_name + '*' + self.trajectory_format)) == 0:
@@ -109,7 +135,7 @@ class GistAnalyser:
 
     def _write_gist_input_line(self):
         with open(self.cpptraj_command_file, 'a') as f:
-            f.write('gigist ')
+            f.write('gist')
             if self.grid_center is not None and self.grid_center.lower() != 'none':
                 # if not given CPPTRAJ uses origin
                 f.write('gridcntr ')
@@ -118,8 +144,10 @@ class GistAnalyser:
             self._write_variable(f, self.grid_lengths)
             f.write('gridspacn ' + str(self.grid_spacing) + ' ')
             f.write('refdens ' + str(self.refdens) + ' ')
-            f.write('febiss ' + str(self.water_angle) + ' ')  # enables febiss placement in cpptraj
+            f.write('rigidatoms ' + str(self.rigid_atom_0) + ' ' + str(self.rigid_atom_1) + ' ' + str(self.rigid_atom_2) + ' ')
             f.write('out ' + self.gist_out_file + '\n')
+            f.write('dx')
+            f.write('febiss ' + str(self.char_angle) + '\n')  # enables febiss placement in cpptraj
             f.write('run')
 
     def _write_variable(self, f, variable):
@@ -176,7 +204,7 @@ class GistAnalyser:
         gist_data = open(self.gist_out_file, 'r').readlines()
         solute_elements = []
         solute_atoms = []
-        with open('febiss-waters.pdb', 'r') as f:
+        with open('febiss-solvents.pdb', 'r') as f:
             for line in f:
                 row = line.split()
                 if row[3] == 'SOL':
@@ -189,4 +217,4 @@ class GistAnalyser:
                 f.write(e + '\t' + a[0] + '\t' + a[1] + '\t' + a[2] + '\n')
             for line in gist_data[2:]:
                 row = line.split()
-                f.write('H\t' + row[1] + '\t' + row[2] + '\t' + row[3] + '\n')
+                f.write('H\t' + row[1] + '\t' + row[2] + '\t' + row[3] + '\n') #grid points are represented as H nuclei TODO:change?

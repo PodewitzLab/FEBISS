@@ -11,8 +11,8 @@ import subprocess
 import sys
 import yaml
 
-from ..utilities.structures import Solute, Water
-from ..utilities.io_handling import read_pdb, write_style_file
+from ..utilities.structures import Solute, Solvent
+from ..utilities.io_handling import read_pdb, write_style_file, Input
 from ..plotting.display import Plot
 
 
@@ -33,32 +33,71 @@ def main():
         help_message()
     with open(arg, 'r') as yamlfile:
         param = yaml.safe_load(yamlfile.read().replace("\t", "  ").replace("    ", "  "))
-    # first check for gist analysis
+
+    # instantiate solvent and solute
+    solvent = Solvent()
+    solute = Solute()
+
+    # check for header
+    if "header" not in param.keys():
+        water = Input("Could not find a header in the yaml file. Is water your main solvent? [y/n]").yn()
+        if water:
+            tip3p = Input("Do you use TIP3P water?").yn()
+        else:
+            tip3p = False
+    else:
+        water = param["header"]["water"]
+        tip3p = param["header"]["tip3p"]
+
+    # check for gist analysis
     if "gist" in param.keys():
         from ..utilities.gist import GistAnalyser
-        analyser = GistAnalyser(**param["gist"])
+        analyser = GistAnalyser(water,tip3p,**param["gist"])
+        solvent = Solvent(analyser.solv_top,
+                          analyser.solv_abb,
+                          analyser.solv_abb,
+                          analyser.solv_size,
+                          analyser.rigid_atom_0,
+                          analyser.rigid_atom_1,
+                          analyser.rigid_atom_2)
         analyser.perform_gist_analysis()
     elif "GIST" in param.keys():
         from ..utilities.gist import GistAnalyser
-        analyser = GistAnalyser(**param["GIST"])
+        analyser = GistAnalyser(water,tip3p,**param["GIST"])
+        solvent = Solvent(analyser.solv_top,
+                          analyser.solv_abb,
+                          analyser.solv_size,
+                          analyser.rigid_atom_0,
+                          analyser.rigid_atom_1,
+                          analyser.rigid_atom_2)
         analyser.perform_gist_analysis()
-    # now check for plotting, else assume that only plotting options are given directly
+    else:
+        if not water:
+            solvent = Solvent(Input('Could not find a "GIST" block in the yaml file. Since you are not using water as main solvent,'
+                                    'please specify the following parameters: \nName of solvent topology file: ',type=str),
+                              Input('3 character abbreviation of the used solvent: ', type=str),
+                              Input('How many atoms does your solvent molecule contain?: ',type=int),
+                              Input('Please specify "rigid_atom_0: ', type=str),
+                              Input('Please specify "rigid_atom_1: ', type=str),
+                              Input('Please specify "rigid_atom_2: ', type=str))
+
+    # now check for plotting, else assume that only plotting options are given directly #
+
     for key in param.keys():
         if key.lower() == 'plotting':
             param = param['plotting']
             break
-    solute = Solute()
-    water = Water()
-    febiss_file = param.get('febiss_file', 'febiss-waters.pdb')
-    read_pdb(febiss_file, solute, water)
+    #solute = Solute() #info about solute will be given in read_pdb
+    #solvent = Solvent(solv_size) #info about solvent will be given in read_pdb
+    febiss_file = param.get('febiss_file', 'febiss-solvents.pdb')
+    read_pdb(febiss_file, solute, solvent)
     display = Plot(**param)
-    filename = display.gui(solute, water)
+    filename = display.gui(solute, solvent)
     if which('pymol') is not None:
         style_file = param.get('style_file', write_style_file())
         subprocess.call(['pymol', filename, style_file])
     print('FEBISS ended successfully')
     sys.exit()
-
 
 if __name__ == '__main__':
     main()

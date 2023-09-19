@@ -15,10 +15,10 @@ class Solute:
     def __init__(self, polar_cutoff: float = 1.1):
         # if solute H further away from any non-C and non-H atom than this cutoff, it is apolar
         self.polar_cutoff = polar_cutoff
-        self.elements = []
-        self.atoms = []
-        self.polars = []
-        self.values = []
+        self.elements = [] #contains element names
+        self.atoms = [] #contains xyz coordinates
+        self.polars = [] #contain polar atoms of solute determined with determine_polar_... method.
+        self.values = [] #contain the temperature factor. TODO:verify maybe it is the energy value
 
     def determine_polar_hydrogen_and_non_hydrogen(self):
         polars = []  # includes all solute non-H atoms and H atoms not bond to C or H
@@ -36,12 +36,18 @@ class Solute:
         self.polars = np.asarray(polars)
 
 
-class Water:
-    def __init__(self):
-        self.elements = []
-        self.atoms = []
-        self.values = []
-        self.all_values = []
+class Solvent:
+    def __init__(self, top, abb, size, rigid_atom_0, rigid_atom_1, rigid_atom_2):
+        self.top = top #can be None if using water
+        self.abb = abb #can be None if using water
+        self.size = size #3 if using water
+        self.rigid_atom_0 = rigid_atom_0 #O if using water
+        self.rigid_atom_1 = rigid_atom_1 #H if using water
+        self.rigid_atom_2 = rigid_atom_2 #H if using water
+        self.elements = [] #contains element names
+        self.atoms = [] #contains xyz coordinates
+        self.values = [] #contains the
+        self.all_values = [] #contain the temperature factor for each atom 3 times. TODO:verify. maybe it is the energy value
 
     def sort_by_value(self):
         self.elements = [x for _, x in

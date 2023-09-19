@@ -18,7 +18,7 @@ default = {'installation_path': '~/.dependencies_febiss', 'openmp': True, 'cuda'
 
 
 def help_message():
-    print('\nFEBISS requires the GIGIST implementation for CPPTRAJ by the Liedlgroup.')
+    #print('\nFEBISS requires the GIGIST implementation for CPPTRAJ by the Liedlgroup.')
     print('This setup program installs this dependency for you and sets the global variables.')
     print('If you already have the sufficient software, you can skip this setup and write the path in \n'
           + SETTINGS_FILE + ' yourself like so:')
