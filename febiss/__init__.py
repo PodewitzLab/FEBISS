@@ -10,10 +10,10 @@ from typing import Dict
 import os
 import yaml
 
-__author__ = "Miguel Steiner"
-__email__ = "steiner.mig@gmail.com"
+__author__ = "Miguel Steiner, Lukas Magenheim"
+__email__ = "steiner.mig@gmail.com, l.magenheim@protonmail.com"
 __maintainer__ = "Maren Podewitz"
-__maintainer_email__ = "maren.podewitz@uibk.ac.at"
+__maintainer_email__ = "maren.podewitz@tuwien.ac.at"
 
 SETTINGS_FILE = os.path.join(os.path.expanduser("~"), ".febissrc.yaml")
 

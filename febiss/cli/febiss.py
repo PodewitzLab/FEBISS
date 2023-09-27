@@ -11,6 +11,8 @@ import subprocess
 import sys
 import yaml
 
+from ..solvents import SOLVENT_LIST, RIGID_ATOMS_DICT, RIGID_ATOMS_DICT
+from ..utilities.mol2_to_xyz import converter
 from ..utilities.structures import Solute, Solvent
 from ..utilities.io_handling import read_pdb, write_style_file, Input
 from ..plotting.display import Plot
@@ -35,42 +37,48 @@ def main():
         param = yaml.safe_load(yamlfile.read().replace("\t", "  ").replace("    ", "  "))
 
     # instantiate solvent and solute
-    solvent = Solvent()
+    #solvent = Solvent()
     solute = Solute()
+
+    #path = ..solvents.__path__[0]  # +"/{0}".format(solv_file) #commented out because path is passed to converter
+    #converter(path, solv_abb)
 
     # check for header
     if "header" not in param.keys():
-        water = Input("Could not find a header in the yaml file. Is water your main solvent? [y/n]").yn()
+        water = Input("\n\nCould not find a header in the yaml file. Is water your main solvent? [y/n]\n").yn()
         if water:
-            tip3p = Input("Do you use TIP3P water?").yn()
+            tip3p = Input("\n\nDo you use TIP3P water?\n").yn()
+            pyconsolv = False
         else:
             tip3p = False
+            pyconsolv = Input("\n\nDid you use one of these solvents from the PyConSolv package "
+                              "(https://github.com/PodewitzLab/PyConSolv/tree/main/src/PyConSolv/solvents)?:\n"
+                              + "   ".join(SOLVENT_LIST)).yn()
     else:
         water = param["header"]["water"]
         tip3p = param["header"]["tip3p"]
+        pyconsolv = param["header"]["pyconsolv"]
 
     # check for gist analysis
     if "gist" in param.keys():
         from ..utilities.gist import GistAnalyser
-        analyser = GistAnalyser(water,tip3p,**param["gist"])
-        solvent = Solvent(analyser.solv_top,
-                          analyser.solv_abb,
-                          analyser.solv_abb,
-                          analyser.solv_size,
+        analyser = GistAnalyser(water,tip3p,pyconsolv,**param["gist"])
+        solvent = Solvent(analyser.solv_abb,
+                          analyser.pyconsolv,
                           analyser.rigid_atom_0,
                           analyser.rigid_atom_1,
                           analyser.rigid_atom_2)
         analyser.perform_gist_analysis()
-    elif "GIST" in param.keys():
-        from ..utilities.gist import GistAnalyser
-        analyser = GistAnalyser(water,tip3p,**param["GIST"])
-        solvent = Solvent(analyser.solv_top,
-                          analyser.solv_abb,
-                          analyser.solv_size,
-                          analyser.rigid_atom_0,
-                          analyser.rigid_atom_1,
-                          analyser.rigid_atom_2)
-        analyser.perform_gist_analysis()
+    #elif "GIST" in param.keys():
+    #    from ..utilities.gist import GistAnalyser
+    #    analyser = GistAnalyser(water,tip3p,**param["GIST"])
+    #    solvent = Solvent(analyser.solv_top,
+    #                      analyser.solv_abb,
+    #                      analyser.solv_size,
+    #                      analyser.rigid_atom_0,
+    #                      analyser.rigid_atom_1,
+    #                      analyser.rigid_atom_2)
+    #    analyser.perform_gist_analysis()
     else:
         if not water:
             solvent = Solvent(Input('Could not find a "GIST" block in the yaml file. Since you are not using water as main solvent,'

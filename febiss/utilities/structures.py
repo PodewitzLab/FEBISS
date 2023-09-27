@@ -37,10 +37,10 @@ class Solute:
 
 
 class Solvent:
-    def __init__(self, top, abb, size, rigid_atom_0, rigid_atom_1, rigid_atom_2):
-        self.top = top #can be None if using water
+    def __init__(self, abb : str = "WAT", solv_file : bool = False, rigid_atom_0 : int = 0, rigid_atom_1 : int = 1, rigid_atom_2 : int = 2): #before 25 September 2023: __init__(self, top, abb, size, rigid_atom_0, rigid_atom_1, rigid_atom_2):
+        #self.top = top #can be None if using water
         self.abb = abb #can be None if using water
-        self.size = size #3 if using water
+        self.solv_file = solv_file
         self.rigid_atom_0 = rigid_atom_0 #O if using water
         self.rigid_atom_1 = rigid_atom_1 #H if using water
         self.rigid_atom_2 = rigid_atom_2 #H if using water

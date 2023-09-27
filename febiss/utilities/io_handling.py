@@ -38,7 +38,7 @@ def read_pdb(pdb, solute: Solute, solvent: Solvent):
     solvent.sort_by_value()
 
 
-def write_pdb(pdb: str, structure: Union[Solute, Solvent], solute: bool = False, abb):
+def write_pdb(pdb: str, structure: Union[Solute, Solvent], abb, solute: bool = False):
     if solute:
         atomcounter = 1
         f = open(pdb, 'w')

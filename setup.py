@@ -54,10 +54,12 @@ setup(
     packages=['febiss',
               'febiss.cli',
               'febiss.plotting',
+              'febiss.solvents',
               'febiss.utilities'],
     package_data={
         'febiss': [
-            'manual/*'
+            'manual/*',
+            'solvents/*.mol2'
         ]
     },
     py_modules=[

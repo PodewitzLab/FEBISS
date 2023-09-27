@@ -33,12 +33,14 @@ class UnsuccessfulAnalysisException(Exception):
 
 
 class GistAnalyser:
-    def __init__(self, water=False, tip3p=False, **kwargs):
-        self._set_defaults(water,tip3p)
+    def __init__(self, water=False, tip3p=False, pyconsolv=False, **kwargs): #TODO: change passing of 3 args to passing of 1 int arg e.g. 1 = tip3p, 2 = water, 3 = pyconsolv, 4 = random
+        self._set_defaults(water,tip3p,pyconsolv)
         self.required_keys = {'top', 'trajectory_name'}
         if not self.tip3p:
-            self.required_keys.update(['refdens', 'char_angle'])
-        if not self.water:
+            self.required_keys.update(['refdens',
+                                       #'char_angle'
+                                       ])
+        if not self.water and not self.pyconsolv:
             self.required_keys.update(
                 ['rigid_atom_0','rigid_atom_1','rigid_atom_2'])
         for key in self.required_keys:
@@ -51,10 +53,17 @@ class GistAnalyser:
                              'gist_grid_file', 'char_angle', 'solv_abb', 'solv_top', 'rigid_atom_0','rigid_atom_1','rigid_atom_2'}
         self.__dict__.update((k, v) for k, v in kwargs.items() if k in self.allowed_keys)
         if not self.tip3p:
-            self.allowed_keys.difference_update(
-                ['refdens', 'char_angle'])
+            self.allowed_keys.difference_update([
+                'refdens',
+                'solv_abb',
+                 #'char_angle'
+                 ])
         if not self.water and self.tip3p:
-            self.allowed_keys.difference_update(['solv_top', 'solv_abb','solv_size','rigid_atom_0','rigid_atom_1','rigid_atom_2'])
+            self.allowed_keys.difference_update([
+                #'solv_top',
+                #'solv_size',
+                'rigid_atom_0','rigid_atom_1','rigid_atom_2'
+            ])
 
 
 
@@ -83,11 +92,12 @@ class GistAnalyser:
             self._write_rdf_input_line(value, key)
             self._execute_cpptraj()
 
-    def _set_defaults(self,water,tip3p):
+    def _set_defaults(self,water,tip3p,pyconsolv):
         self.top = None
         self.trajectory_name = None
         self.water = water
         self.tip3p = tip3p # set to true only if TIP3P water is used
+        self.pyconsolv = pyconsolv
         self.solv_top = None #stores the name of the solvent topology
         self.solv_abb = None #stores the abbreviation of the solvent molecule
         self.solv_size = 3
@@ -121,8 +131,8 @@ class GistAnalyser:
                 # if not given CPPTRAJ uses all frames
                 f.write(' ' + self.frame_selection)
             f.write('\n')
-            if not self.water:
-                f.write('solvent' + self.solv_top + f':{self.solv_abb}\n')
+            #if not self.water:
+            #    f.write('solvent' + self.solv_top + f':{self.solv_abb}\n')
             f.write('center ' + self.solute_residues + ' origin\n')
             f.write('image origin center familiar\n')
 
