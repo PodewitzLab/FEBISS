@@ -15,6 +15,7 @@ from ..solvents import SOLVENT_LIST, RIGID_ATOMS_DICT, RIGID_ATOMS_DICT
 from ..utilities.mol2_to_xyz import converter
 from ..utilities.structures import Solute, Solvent
 from ..utilities.io_handling import read_pdb, write_style_file, Input
+from ..utilities.write_solute_pdb import write_solute_pdb
 from ..plotting.display import Plot
 
 
@@ -62,13 +63,22 @@ def main():
     # check for gist analysis
     if "gist" in param.keys():
         from ..utilities.gist import GistAnalyser
-        analyser = GistAnalyser(water,tip3p,pyconsolv,**param["gist"])
+        analyser = GistAnalyser(water, tip3p, pyconsolv, **param["gist"])
+
+        write_solute_pdb(analyser.top,
+                         analyser.trajectory_name+'*'+analyser.trajectory_format,
+                         analyser.solv_abb) #reads out the solute pdb which is needed to create the febissSolventFile.
+                                            #Previously this step was directly done in cpptraj.
+
         solvent = Solvent(analyser.solv_abb,
                           analyser.pyconsolv,
                           analyser.rigid_atom_0,
                           analyser.rigid_atom_1,
                           analyser.rigid_atom_2)
+
         analyser.perform_gist_analysis()
+        analyser.perform_febiss_analysis()
+
     #elif "GIST" in param.keys():
     #    from ..utilities.gist import GistAnalyser
     #    analyser = GistAnalyser(water,tip3p,**param["GIST"])
@@ -79,18 +89,18 @@ def main():
     #                      analyser.rigid_atom_1,
     #                      analyser.rigid_atom_2)
     #    analyser.perform_gist_analysis()
-    else:
-        if not water:
-            solvent = Solvent(Input('Could not find a "GIST" block in the yaml file. Since you are not using water as main solvent,'
-                                    'please specify the following parameters: \nName of solvent topology file: ',type=str),
-                              Input('3 character abbreviation of the used solvent: ', type=str),
-                              Input('How many atoms does your solvent molecule contain?: ',type=int),
-                              Input('Please specify "rigid_atom_0: ', type=str),
-                              Input('Please specify "rigid_atom_1: ', type=str),
-                              Input('Please specify "rigid_atom_2: ', type=str))
+    # else:
+    #     if not water:
+    #         solvent = Solvent(Input('Could not find a "GIST" block in the yaml file. Since you are not using water as main solvent,'
+    #                                 'please specify the following parameters: \nName of solvent topology file: ',type=str),
+    #                           Input('3 character abbreviation of the used solvent: ', type=str),
+    #                           Input('How many atoms does your solvent molecule contain?: ',type=int),
+    #                           Input('Please specify "rigid_atom_0: ', type=str),
+    #                           Input('Please specify "rigid_atom_1: ', type=str),
+    #                           Input('Please specify "rigid_atom_2: ', type=str))
+
 
     # now check for plotting, else assume that only plotting options are given directly #
-
     for key in param.keys():
         if key.lower() == 'plotting':
             param = param['plotting']

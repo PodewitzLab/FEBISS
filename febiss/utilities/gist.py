@@ -68,8 +68,9 @@ class GistAnalyser:
 
 
     def perform_gist_analysis(self):
-        if os.path.exists('febiss-solvents.pdb'):
-            warn("WARNING: 'febiss-solvents.pdb' is already present in directory.")
+        #changed from checking for febiss-solvents.pdb to gist-output.dat
+        if os.path.exists('gist-output.dat'):
+            warn("WARNING: 'gist-output.dat' is already present in directory.")
             while True:
                 if Input("Do you want to analyze the trajectory again? [y/n]").yn():
                     break
@@ -78,19 +79,39 @@ class GistAnalyser:
                     return
         if self.rdf:
             self.perform_rdf_analysis()
-        self._write_cpptraj_file()
+        self._write_gist_cpptraj_file()
         self._write_gist_input_line()
-        self._execute_cpptraj()
-        if not os.path.exists('febiss-solvents.pdb'):
+        self._execute_cpptraj(self.gist_cpptraj_command_file)
+        # changed from febiss-solvents.pdb to gist-output.dat
+        if not os.path.exists('gist-output.dat'):
             raise UnsuccessfulAnalysisException(
-                "'febiss-solvents.pdb' is not present, the CPPTRAJ analysis did not work.")
+                "'gist-output.dat' is not present, the CPPTRAJ analysis did not work.")
         self._write_out_gist_grid()
+
 
     def perform_rdf_analysis(self):
         for key, value in self.rdf_names.items():
-            self._write_cpptraj_file()
+            self._write_gist_cpptraj_file()
             self._write_rdf_input_line(value, key)
-            self._execute_cpptraj()
+            self._execute_cpptraj(self.gist_cpptraj_command_file)
+
+    def perform_febiss_analysis(self):
+        #following if branch adopted from perform_gist_analysis(self). LM20231005
+        if os.path.exists('febiss-solvents.pdb'):
+            warn("WARNING: 'febiss-solvents.pdb' is already present in directory.")
+            while True:
+                if Input("Do you want to analyze the trajectory again? [y/n]").yn():
+                    break
+                else:
+                    print("Skipping analysis and reading existing data.")
+                    return
+        self._write_febiss_cpptraj_file()
+        self._execute_cpptraj(self.febiss_cpptraj_command_file)
+        #following if branch adopted from perform_gist_analysis(self). LM20231005
+        if not os.path.exists('febiss-solvents.pdb'):
+            raise UnsuccessfulAnalysisException(
+                "'febiss-solvents.pdb' is not present, the CPPTRAJ analysis did not work.")
+
 
     def _set_defaults(self,water,tip3p,pyconsolv):
         self.top = None
@@ -115,16 +136,21 @@ class GistAnalyser:
         else:
             self.refdens = None#Input("Provide reference density as float:\n", type=float)
             self.char_angle = None#Input("Provide characteristic angle as float:\n", type=float)
+        self.quatfile = 'gist-quats.dat'
+        self.occurrence = 0 #number of how often the central atom species is present in the solvent molecule
+        self.nsolvent = 0 #number of solvents used in the simulation
+        self.nframes = 0 #number of simulation frames
         self.solute_residues = ':1'
-        self.cpptraj_command_file = 'cpptraj.in'
+        self.gist_cpptraj_command_file = 'gist.in' #changes: 1) originally: cpptraj_command_file, 2) originally: cpptraj.in. LM20231005
+        self.febiss_cpptraj_command_file = 'febiss.in'  # new. LM20231005
         self.gist_out_file = 'gistout.dat'
         self.gist_grid_file = 'gist_grid.xyz'
         self.rdf = True
         self.rdf_names = {'center2': 'center of solute', 'C': 'carbon', 'O': 'oxygen', 'N': 'nitrogen', 'P': 'phosphor'} #TODO: sense?
 
-    def _write_cpptraj_file(self): #this creates the content for cpptraj.in
+    def _write_gist_cpptraj_file(self): #this creates the content for gist.in. renamed from _write_cpptraj_file(). LM20231005
         self._sanity_check()
-        with open(self.cpptraj_command_file, 'w') as f:
+        with open(self.gist_cpptraj_command_file, 'w') as f:
             f.write('parm ' + self.top + '\n')
             f.write('trajin ' + self.trajectory_name + '*' + self.trajectory_format)
             if self.frame_selection is not None and self.frame_selection.lower() != 'none':
@@ -136,12 +162,30 @@ class GistAnalyser:
             f.write('center ' + self.solute_residues + ' origin\n')
             f.write('image origin center familiar\n')
 
+    def _write_febiss_cpptraj_file(self): #this creates the content for gist.in. renamed from _write_cpptraj_file(). LM20231005
+        self._find_febiss_info()
+        with open(self.febiss_cpptraj_command_file, 'w') as f:
+            f.write('readdata population.dx')
+            f.write('readdata dTSorient_dens.dx')
+            f.write('readdata dTStrans_dens.dx')
+            f.write('readdata Esw_dens.dx')
+            f.write('readdata Eww_dens.dx')
+            f.write('febiss refdens '+ str(self.refdens) + 'occurrence' + str(self.occurrence) +
+                    'nsolvent' + str(self.nsolvent) + 'nframes' + str(self.nframes))
+
     def _sanity_check(self):
-        #TODO: typedict for other keys?
+        # TODO: typedict for other keys?
         if not os.path.exists(self.top):
             raise InvalidInputException('The given top file does not exist')
         elif len(glob.glob(self.trajectory_name + '*' + self.trajectory_format)) == 0:
             raise InvalidInputException('The given trajectory name or format is invalid')
+
+    def _find_febiss_info(self):  # assumption: occurrence, nsolvents, nframes are in self.quatfile -> 2nd row
+        with open(self.quatfile, 'r') as f:
+            line = f.readlines()[1].split()
+            self.occurrence = line[0]
+            self.nsolvents = line[1]
+            self.nframes = line[2]
 
     def _write_gist_input_line(self):
         with open(self.cpptraj_command_file, 'a') as f:
@@ -155,9 +199,9 @@ class GistAnalyser:
             f.write('gridspacn ' + str(self.grid_spacing) + ' ')
             f.write('refdens ' + str(self.refdens) + ' ')
             f.write('rigidatoms ' + str(self.rigid_atom_0) + ' ' + str(self.rigid_atom_1) + ' ' + str(self.rigid_atom_2) + ' ')
-            f.write('out ' + self.gist_out_file + '\n')
-            f.write('dx')
-            f.write('febiss ' + str(self.char_angle) + '\n')  # enables febiss placement in cpptraj
+            f.write('out ' + self.gist_out_file)
+            f.write('dx\n')
+            #f.write('febiss ' + str(self.temp) + '\n')  # enables febiss placement in cpptraj
             f.write('run')
 
     def _write_variable(self, f, variable):
@@ -204,11 +248,11 @@ class GistAnalyser:
             f.write("rawrdf 'raw-rdf-" + name + ".dat'\n")
             f.write('run')
 
-    def _execute_cpptraj(self):
+    def _execute_cpptraj(self,file): #changed from (self) to (self,file)
         if 'CPPTRAJ_BIN' not in SETTINGS:
             raise MissingCpptrajException(
                 "The path to the CPPTRAJ binary is not given in the global settings. Execute 'febiss_setup' first")
-        subprocess.call([SETTINGS['CPPTRAJ_BIN'], '-i', self.cpptraj_command_file])
+        subprocess.call([SETTINGS['CPPTRAJ_BIN'], '-i', file]) #changed from self.cpptraj_command_file to file
 
     def _write_out_gist_grid(self):
         gist_data = open(self.gist_out_file, 'r').readlines()

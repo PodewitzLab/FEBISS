@@ -44,10 +44,36 @@ class Solvent:
         self.rigid_atom_0 = rigid_atom_0 #O if using water
         self.rigid_atom_1 = rigid_atom_1 #H if using water
         self.rigid_atom_2 = rigid_atom_2 #H if using water
+
+        #placement
+        self.equivalent_structures = [] #new. stores the coordinates of the symmetry equivalent structures. LM20231005
+        self.reference_quats = []
+
+        #post placement. LM20231005
         self.elements = [] #contains element names
         self.atoms = [] #contains xyz coordinates
         self.values = [] #contains the
         self.all_values = [] #contain the temperature factor for each atom 3 times. TODO:verify. maybe it is the energy value
+
+    def find_equivalent_structures(self, file):
+        pass
+
+    def calc_quats(self):
+        pass
+
+    def compare_quats(self):
+        pass
+
+    def rotate_quats(self):
+        pass
+
+    def average_quats(self):
+        pass
+
+    def rotate_coords(self):
+        pass
+
+
 
     def sort_by_value(self):
         self.elements = [x for _, x in
