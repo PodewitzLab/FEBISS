@@ -26,6 +26,6 @@ def converter(path,abb):
                 xyz_lines.append(line)
 
             with open(path_xyz,'w') as xyzfile:
-                xyzfile.writelines(xyz_lines)
+                    xyzfile.writelines(xyz_lines)
 
-            return
+            return path_xyz
