@@ -37,6 +37,8 @@ def read_pdb(pdb, solute: Solute, solvent: Solvent):
     solvent.atoms = np.asarray(solvent.atoms)
     solvent.sort_by_value()
 
+def read_febiss_file(febiss_file : str, )
+
 
 def write_pdb(pdb: str, structure: Union[Solute, Solvent], abb, solute: bool = False):
     if solute:

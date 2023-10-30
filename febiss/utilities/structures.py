@@ -18,11 +18,11 @@ from .distance_functions import distance_squared
 class Solute:
     def __init__(self, polar_cutoff: float = 1.1):
         # if solute H further away from any non-C and non-H atom than this cutoff, it is apolar
-        self.polar_cutoff = polar_cutoff
+        self.polar_cutoff = polar_cutoff #UNCLEAR: what is this polar_cutoff value based on? how to deal with inductive/mesomeric effects? LM20231027
         self.elements = [] #contains element names
         self.atoms = [] #contains xyz coordinates
         self.polars = [] #contain polar atoms of solute determined with determine_polar_... method.
-        self.values = [] #contain the temperature factor. TODO:verify maybe it is the energy value
+        self.values = [] #contains energy
 
     def determine_polar_hydrogen_and_non_hydrogen(self):
         polars = []  # includes all solute non-H atoms and H atoms not bond to C or H
@@ -40,7 +40,11 @@ class Solute:
         self.polars = np.asarray(polars)
 
 
-class Solvent:
+class Reference:
+    """
+    This class contains all necessary information on the used solvent and has methods
+    to deal with quaternions and equivalent structures.
+    """
     def __init__(self, solv_file, abb : str = "WAT", rigid_atom_0 : int = 0, rigid_atom_1 : int = 1, rigid_atom_2 : int = 2): #before 25 September 2023: __init__(self, top, abb, size, rigid_atom_0, rigid_atom_1, rigid_atom_2):
         #self.top = top #can be None if using water
         self.solv_file = solv_file
@@ -53,32 +57,35 @@ class Solvent:
 
         #placement
         self._process_equivalent_structures(True)
-        self.equivalent_structures = [] #new. stores the coordinates of the symmetry equivalent structures as dict. LM20231005
-        self.symmetry_rots_as_quats = [] #new. stores the quaternions of the rotation matrices that transform the equivalent structure into the initial structure. LM20231006
-        self.reference_quats = [] #new. stores the quaternions associated to the equivalent structures calculated from the same 3 rigid atoms LM20231006
+        self.equivalent_structures = {} #stores the atomic coordinates of the symmetry equivalent structures as dict. LM20231005
+        self.symmetry_rots_as_quats = [] #stores the quaternions of the rotation matrices that transform the equivalent structure into the initial structure. LM20231006
+        self.reference_quats = [] #stores the quaternions associated to the equivalent structures calculated from the same 3 rigid atoms LM20231006
 
         #post placement. LM20231005
         self.elements = [] #contains element names
         self.atoms = [] #contains xyz coordinates
         self.values = [] #contains the
         self.all_values = [] #contain the temperature factor for each atom 3 times. TODO:verify. maybe it is the energy value
-        self.keep = False #new: cleans up xyz-files. not implemented yet as of 20231006
+        self.keep = False #cleans up xyz-files. not implemented yet as of 20231006
 
     def _process_equivalent_structures(self,write: bool = False):
 
         """
-        analyzes the given solvent, gives coordinates for equivalent structures and sets:
+        analyzes the given solvent, gives coordinates for equivalent structures and sets the following:
         1) self.equivalent_structures
         2) self.symmetry_rots_as_quats
         3) self.reference_quats
         """
 
+        #building up self.equivalent_structures and self.symmetry_rots_as_quats
         pga = ana.PointGroupAnalyzer(self.mol)
         symm_ops = pga.get_symmetry_operations()
         num = 0
         coord_after_rot_dict = {}
         for symm in symm_ops:
-            self.symmetry_rots_as_quats.append(quat.from_rotation_matrix(symm.rotation_matrix)) #transform the rotation matrix into quaternion using quaternion package. LM20231006
+            rot = symm.rotation_matrix
+            if np.abs(np.linalg.det(rot) - 1) < 1e-4: #taken from RotSampling.py. Filters only for those transformations that have adeterminant > 1 which means no mirror. LM20231027
+                self.symmetry_rots_as_quats.append(quat.from_rotation_matrix(rot)) #transform the rotation matrix into quaternion using quaternion package. LM20231006
             coords_after_rot = []
             for idx in range(len(self.mol.cart_coords())):
                 coords_after_rot.append(symm.apply_rotation_only(self.mol.cart_coords[idx]))
@@ -86,13 +93,16 @@ class Solvent:
             num += 1
         self.equivalent_structures = coord_after_rot_dict
 
-        for i in range(len(coord_after_rot_dict.keys())):
+        #building up self.reference_quats
+        for key in self.equivalent_structures.keys(): #key is int starting at 0
+            self.reference_quats.append(self._calc_quats(self.equivalent_structures[key]))
 
 
 
-    def _calc_quats(self):
-        X = self.mol.cart_coords[self.rigid_atom_idx_1] - self.mol.cart_coords[self.rigid_atom_idx_0]
-        V2 = self.mol.cart_coords[self.rigid_atom_idx_2] - self.mol.cart_coords[self.rigid_atom_idx_0]
+
+    def _calc_quats(self, mol : Molecule): #updated
+        X = mol.cart_coords[self.rigid_atom_idx_1] - mol.cart_coords[self.rigid_atom_idx_0]
+        V2 = mol.cart_coords[self.rigid_atom_idx_2] - mol.cart_coords[self.rigid_atom_idx_0]
         return quat.from_float_array(gigist_quat(X, V2)) #interface to quaternion package
 
     def _compare_quats(self):

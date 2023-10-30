@@ -53,8 +53,8 @@ class Plot:
     def _set_defaults(self):
         # default values for bar chart
         self.selected_solvents = []
-        self.cutoff1 = 3.0
-        self.cutoff2 = 6.0
+        self.cutoff1 = 3.0 #distance between solute and solvent
+        self.cutoff2 = 6.0 #distance between solute and solvent
         self.displayed_solvents = 50
         self.colors = {'within': '#fdb462', 'between': '#80b1d3', 'outside': '#de2d26', 'selected': '#b3de69',
                        'mark': '#bc80bd'}
@@ -95,14 +95,14 @@ class Plot:
         same_solvent_cutoff = 1.6
         squared_same_solvent_cutoff = same_solvent_cutoff ** 2
         if len(solute.polars) == 0:
-            solute.determine_polar_hydrogen_and_non_hydrogen()
+            solute.determine_polar_hydrogen_and_non_hydrogen() #gives all non-H atoms and polar hydrogen. Attention - unclear whether using the polar cut-off for H as done here is valid LM20231027
         within_cutoff = []
         between_cutoffs = []
         outside_cutoff2 = []
         """ cycle over solvents and assign to list for each polar solute atom """
         skip_next = False
         skip_next_next = False
-        for count, sol in enumerate(solvent.atoms):
+        for count, sol in enumerate(solvent.atoms): #this iterates through all atoms of the febiss_solvents.pdb which are marked with "HETATM" therefore either H or O information. LM20231027
             if skip_next:
                 if skip_next_next:
                     skip_next_next = False

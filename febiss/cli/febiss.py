@@ -13,7 +13,7 @@ import yaml
 
 from ..solvents import SOLVENT_LIST, RIGID_ATOMS_DICT, RIGID_ATOMS_DICT
 from ..utilities.mol2_to_xyz import converter
-from ..utilities.structures import Solute, Solvent
+from ..utilities.structures import Solute, Reference, Solvent
 from ..utilities.io_handling import read_pdb, write_style_file, Input
 from ..utilities.write_solute_pdb import write_solute_pdb
 from ..plotting.display import Plot
@@ -108,7 +108,8 @@ def main():
     #solute = Solute() #info about solute will be given in read_pdb
     #solvent = Solvent(solv_size) #info about solvent will be given in read_pdb
     febiss_file = param.get('febiss_file', 'febiss-solvents.pdb')
-    read_pdb(febiss_file, solute, solvent)
+    #read_pdb(febiss_file, solute, solvent) #new reading in procedure will be used LM20231027
+    read_febiss_file(febiss_file)
     display = Plot(**param)
     filename = display.gui(solute, solvent)
     if which('pymol') is not None:
