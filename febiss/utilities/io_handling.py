@@ -9,23 +9,23 @@ See LICENSE for details
 from typing import Union
 import numpy as np
 
-from febiss.utilities.structures import *
+from ..utilities.structures import *
 
 
-def read_pdb(pdb, solute: Solute, water: Water):
+def read_pdb(pdb, solute: Solute, solvent: Solvent):
     with open(pdb, 'r') as f:
         for line in f:
             if 'HETATM' in line:
                 row = line.split()
-                water.elements.append(row[-1])
-                water.atoms.append(np.array([float(r) for r in row[-6:-3]]))
-                if row[-1] == "O":
-                    water.values.append(-1 * float(row[-2]))
-                    water.all_values.append(-1 * float(row[-2]))
-                    water.all_values.append(-1 * float(row[-2]))
-                    water.all_values.append(-1 * float(row[-2]))
-                elif row[-1] != 'H':
-                    raise NotImplementedError("ERROR: NON-WATER HETATM present in pdb file")
+                solvent.elements.append(row[-1])
+                solvent.atoms.append(np.array([float(r) for r in row[-6:-3]]))
+                if row[2] == solvent.rigid_atom_0: #Changed from row[-1] (which contains the ambiguous element name) to row[2] which contains the atom label. TODO: Update pdb file generation in CPPTRAJ
+                    solvent.values.append(-1 * float(row[-2]))
+                    for i in range(solvent.size): #adds the tempfactor/energy value for each solvent atom
+                        solvent.all_values.append(-1 * float(row[-2]))
+
+                #elif row[-1] != 'H':
+                #    raise NotImplementedError("ERROR: NON-solvent HETATM present in pdb file")
             elif 'ATOM' in line:
                 row = line.split()
                 solute.elements.append(row[-1])
@@ -34,11 +34,11 @@ def read_pdb(pdb, solute: Solute, water: Water):
 
     solute.atoms = np.asarray(solute.atoms)
     solute.determine_polar_hydrogen_and_non_hydrogen()
-    water.atoms = np.asarray(water.atoms)
-    water.sort_by_value()
+    solvent.atoms = np.asarray(solvent.atoms)
+    solvent.sort_by_value()
 
 
-def write_pdb(pdb: str, structure: Union[Solute, Water], solute: bool = False):
+def write_pdb(pdb: str, structure: Union[Solute, Solvent], solute: bool = False, abb):
     if solute:
         atomcounter = 1
         f = open(pdb, 'w')
@@ -56,7 +56,7 @@ def write_pdb(pdb: str, structure: Union[Solute, Water], solute: bool = False):
         if solute:
             j.append('SOL'.ljust(3))  # resname#1s
         else:
-            j.append('FEB'.ljust(3))  # resname#1s
+            j.append(abb.ljust(3))  # resname#1s abb instead off "FEB"
         j.append('A'.rjust(1))  # Astring
         if solute:
             j.append('1'.rjust(4))  # resnum
@@ -116,10 +116,47 @@ def write_style_file() -> str:
         f.write('set label_digits, 2\n')
         f.write('label ele o and resn FEB, b\n')
         f.write('select solute, not resn "FEB"\n')
-        f.write('select waterMolecules, resn "FEB"\n')
-        f.write('distance solute-water, solute, waterMolecules, cutoff=3.2, mode=2\n')
+        f.write('select solventMolecules, resn "FEB"\n')
+        f.write('distance solute-solvent, solute, solventMolecules, cutoff=3.2, mode=2\n')
         f.write('set dash_color, green\n')
         f.write('spectrum b, magenta_white_yellow, ele o and resn FEB\n')
-        f.write('hide labels, solute-water\n')
+        f.write('hide labels, solute-solvent\n')
         f.write('center\n')
     return filename
+
+
+class Input:
+    def __init__(self, prompt, **kwargs):
+        self.prompt = str(prompt)
+        self.input = input(self.prompt +"\n")
+        if len(kwargs) > 0:
+            self.form = kwargs["type"]
+            self.__assertion()
+
+    def yn(self) -> bool:
+        while self.input not in ['Y', 'N', 'y', 'n']:
+            self.prompt = "Please respond with 'y' or 'n' only!\n"
+            self.input = input(self.prompt + "\n")
+        if self.input.lower() == "y":
+            return True
+        else:
+            return False
+
+    def reassure(self):
+        if not Input("You provided the following input: " + str(self.input) + "\n Is that correct?").yn():
+            self.input = input(self.prompt + "\n")
+            self.__assertion()
+
+    def __assertion(self):
+        try:
+            self.input = self.form(self.input + "\n")
+            self.reassure()
+        except ValueError:
+            print("The input does not fit the requirements, must be " + str(self.form.__name__))
+            self.input = input(self.prompt + "\n")
+            self.__assertion()
+        except SyntaxError:
+            print("The input does not fit the requirements, must be " + str(self.form.__name__))
+            self.input = input(self.prompt + "\n")
+            self.__assertion()
+
