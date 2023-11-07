@@ -54,7 +54,7 @@ def main():
     if not os.path.exists(inst_path):
         os.mkdir(inst_path)
     os.chdir(inst_path)
-    subprocess.call(['git', 'clone', '--single-branch', '--branch', 'cpptraj_fix', 'https://github.com/PodewitzLab/gigist.git'])
+    subprocess.call(['git', 'clone', 'https://github.com/PodewitzLab/gigist.git'])
     #subprocess.call(['git', 'clone', '--single-branch', '--branch', 'febiss_water_angle_option',
     #                 'https://github.com/steinmig/gigist.git'])
     subprocess.call(['git', 'clone', 'https://github.com/Amber-MD/cpptraj.git'])
