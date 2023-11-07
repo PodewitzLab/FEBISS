@@ -9,7 +9,7 @@ FEBISS can be installed using pip (pip3) once the repository has been cloned:
 .. code-block:: bash
 
    git clone https://github.com/PodewitzLab/FEBISS.git
-   pip install ./febiss
+   pip install ./FEBISS/
 
 A non super user can install the package using a virtual environment, or
 the ``--user`` flag.
