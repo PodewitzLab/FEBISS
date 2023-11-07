@@ -118,7 +118,8 @@ class GistAnalyser:
             self._write_variable(f, self.grid_lengths)
             f.write('gridspacn ' + str(self.grid_spacing) + ' ')
             f.write('refdens ' + str(self.refdens) + ' ')
-            f.write('febiss ' + str(self.water_angle) + ' ')  # enables febiss placement in cpptraj
+            f.write('febiss ')# partial fix, water angle is hardcoded to TIP3P
+            #f.write('febiss ' + str(self.water_angle) + ' ')  # enables febiss placement in cpptraj
             f.write('out ' + self.gist_out_file + '\n')
             f.write('run')
 
