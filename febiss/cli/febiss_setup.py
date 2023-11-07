@@ -54,14 +54,14 @@ def main():
     if not os.path.exists(inst_path):
         os.mkdir(inst_path)
     os.chdir(inst_path)
-    subprocess.call(['git', 'clone', 'https://github.com/liedllab/gigist.git'])
+    subprocess.call(['git', 'clone', '--single-branch', '--branch', 'cpptraj_fix', 'https://github.com/PodewitzLab/gigist.git'])
     #subprocess.call(['git', 'clone', '--single-branch', '--branch', 'febiss_water_angle_option',
     #                 'https://github.com/steinmig/gigist.git'])
     subprocess.call(['git', 'clone', 'https://github.com/Amber-MD/cpptraj.git'])
     # change CPPTRAJ to working version
     os.chdir('cpptraj')
     # temporary this working commit due to necessary refactoring in GIGIST, which is not finished yet
-    subprocess.call(['git', 'checkout', '3de93cd'])
+    # subprocess.call(['git', 'checkout', '3de93cd'])
     # save directories for rc file
     basic_settings = {'GIGIST_HOME': os.path.join(inst_path, 'gigist'),
                       'CPPTRAJ_HOME': os.path.join(inst_path, 'cpptraj')}
