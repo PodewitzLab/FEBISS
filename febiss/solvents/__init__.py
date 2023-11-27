@@ -6,9 +6,15 @@ Copyright University Innsbruck, Institute for General, Inorganic, and Theoretica
 See LICENSE for details
 """
 
+
+CASE_DICT = {1: "TIP3P",
+             2: "PATH_TO_WATER_FILE",
+             3: "PATH_TO_PYCONSOLV_FILE",
+             4: "PATH_TO_SOLVENT_FILE"}
 """
-These solvents are taken from PyConSolv (https://github.com/PodewitzLab/PyConSolv/tree/e893eb0da780cdd7205f5f94433a599119f1b5b5/src/PyConSolv/solvents) 
+This case dict is used in febiss_settings to create the proper yaml-file.
 """
+
 SOLVENT_LIST = ["Acetonitrile (ACN)",
                 "Acetone (ACT)",
                 "Benzene (BNZ)",
@@ -26,10 +32,33 @@ SOLVENT_LIST = ["Acetonitrile (ACN)",
                 "Pyridine (PYR)",
                 "Tetrahydrofurane (THF)",
                 "Toluene (TOL)"]
+"""
+These solvents are taken from PyConSolv (https://github.com/PodewitzLab/PyConSolv/tree/e893eb0da780cdd7205f5f94433a599119f1b5b5/src/PyConSolv/solvents) 
+"""
 
 FILE_DICT = {}
 for solvent in SOLVENT_LIST:
     FILE_DICT[solvent[-4:-1]] = "{0}.mol2".format(solvent[-4:-1])
+
+NAME_DICT = {
+    "ACN": "Acetonitrile",
+    "ACT": "Acetone",
+    "BNZ": "Benzene",
+    # "CHX": "Cyclohexane",
+    "CL3": "Chloroform",
+    "CL4": "Carbon tetrachloride",
+    "DCM": "Dichloromethane",
+    # "DMF": "Dimethyl formamide",
+    "DMS": "Dimethyl sulfoxide",
+    "ETL": "Ethanol",
+    # "HEX":(),
+    "MTL": "Methanol",
+    "NH3": "Ammonia",
+    # "OCT":"n-Octane",
+    "PYR": "Pyridine",
+    "THF": "Tetrahydrofurane",
+    "TOL": "Toluene"
+}
 
 RIGID_ATOMS_DICT = {
     "ACN": (4, 2, 1),  # H1-C-C

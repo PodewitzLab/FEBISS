@@ -1,3 +1,5 @@
+import os
+
 import quaternion
 
 from utilities.structure_randomizer import write_xyz as write
@@ -230,6 +232,9 @@ def test_3(ori_path,test_path,i1=3,i2=4):
     test = Molecule.from_file(test_path)
     q_ori = create_gist_quat(ori,i1,i2)
     q_test = create_gist_quat(test,i1,i2)
+    stp = setup(ori_path,test_path)
+    print(stp[0][1])
+    print(stp[0][2])
 
     q_ori_inv = quat.quaternion.inverse(q_ori)
     qt = q_ori_inv * q_test
@@ -290,7 +295,7 @@ def relation_between_quats_of_eq_structs(ori_path,test_path,return_path,write_ou
         print(new_coords)
 
 """
-Here it is finally shown how to get the equivalent structure for an arbitrary orientation.
+Here it is finally shown how to get the equivalent quaternion structure for an arbitrary orientation
 """
 
 def test_with_randoms(ori_path,test_path,return_path,i1=3,i2=4,write_out=False):
@@ -302,15 +307,23 @@ def test_with_randoms(ori_path,test_path,return_path,i1=3,i2=4,write_out=False):
     for rot in range(len(ref_quats)):
 
         q_ori = create_gist_quat(ori,i1,i2)
-        q_test = create_gist_quat(test,3,4)
+        q_test = create_gist_quat(test,i1,i2)
 
         qt = q_test * inv(q_ori) * ref_quats[rot+1] #+1 as always because ref_quats is a dict with keys 1 - [number of rots]
 
         new_coords = new_coord_gen(ori, qt)
         if write_out:
             write(ori_path, return_path, new_coords, rot, ori.labels)
+            print('rot: {0}'.format(rot))
+            print("equivalent quaternion by quaternion multiplication:\n {0}".format(qt * q_ori))
+            print("equivalent quaternion by calculating the characteristic quaternion from the created file:\n {0}".
+            format(create_gist_quat(Molecule.from_file(return_path.format(rot)),i1,i2)), end="\n\n")
+
         else:
-            print("new_coords: {0}".format(np.matrix(new_coords)))
+            print('rot: {0}'.format(rot))
+            print("equivalent quaternion:\n {0}".format(qt * q_ori))
+            print("new_coords: {0}".format(np.matrix(new_coords)), end="\n\n")
+
 
 def distance_test(ori_path,ref_path_list: Union[list[str],str],i1 = 3, i2 = 4):
 
@@ -328,20 +341,34 @@ def distance_test(ori_path,ref_path_list: Union[list[str],str],i1 = 3, i2 = 4):
         print("theta: {0}".format(distance(q_ori, q_ref)))
 
 
-def average_test(ori_path,theta:float,i1=3,i2=4):
+def average_test(ori_path,theta:float,i1=3,i2=4, return_path = None):
+    """
+    Rotates a given molecule at ori_path for theta degrees around the z-axis. If a return path is given it also creates
+    xyz-files of the rotated molecules.
+
+    :param ori_path: Path of the original molecule
+    :param theta: rotation angle
+    :param i1: rigid atom 1 for characteristic quaternion calculation
+    :param i2: rigid atom 2 for characteristic quaternion calculation
+    :param return_path: Is None by default. If given, prints out xyz-files of rotated molecules.
+    :return: Prints out and xyz-files to return path if return path is given.
+    """
     ori = Molecule.from_file(ori_path)
-    q_ori = create_gist_quat(ori, 3, 4)
+    q_ori = create_gist_quat(ori, i1, i2)
 
     ori.rotate_sites(theta=theta)
     q_1 = create_gist_quat(ori, i1, i2)
+    if return_path is not None:
+        write(ori_path,return_path,ori.cart_coords,1)
 
     ori.rotate_sites(theta=theta)
     q_2 = create_gist_quat(ori, i1, i2)
+    if return_path is not None:
+        write(ori_path,return_path,ori.cart_coords,2)
 
     print("q_ori: {0}".format(q_ori))
     print("q_1: {0}".format(q_1))
     print("q_2: {0}".format(q_2))
 
     Q = create_Q_matrix([q_ori,q_1,q_2])
-    print(avg(Q))
-
+    print(quat.from_float_array(avg(Q)))

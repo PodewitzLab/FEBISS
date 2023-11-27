@@ -9,13 +9,17 @@ See LICENSE for details
 from shutil import which
 import subprocess
 import sys
-import yaml
 
+import quaternion
+import yaml
+import numpy as np
+
+#import ..utilities.gist
 from ..solvents import SOLVENT_LIST, RIGID_ATOMS_DICT, RIGID_ATOMS_DICT
 from ..utilities.mol2_to_xyz import converter
 from ..utilities.structures import Solute, Reference, Solvent
-from ..utilities.io_handling import read_pdb, write_style_file, Input
-from ..utilities.write_solute_pdb import write_solute_pdb
+from ..utilities.io_handling import write_style_file, Input #,read_pdb
+from ..utilities.gist import GistAnalyser
 from ..plotting.display import Plot
 
 
@@ -27,6 +31,58 @@ def help_message():
     print("To execute CPPTRAJ, it has to be first setup via 'setup_febiss'.\n")
     sys.exit()
 
+def read_data(febiss_file, solute: Solute, solvent: Solvent): #TODO: pass solute.pdb as variable to avoid hardcoding problems
+    """
+    Reads in febiss file (default febiss.dat) and solute_file (default: solute.pdb) and assigns the values to passed Solute and
+    Solvent objects
+
+    :param febiss_file: Contains name of the febiss datafile from Analysis_FEBISS.h/cpp. Default: febiss.dat
+    :param solute: Solute object
+    :param solvent: Solvent object
+    """
+    # deal with febiss.dat
+    with open(febiss_file,'r') as f: #assumed format: no header, no footer, data: voxel, x, y, z, energy
+        data = f.readlines()
+        for line in data:
+            solvent.data.append(tuple(line.split()))
+    solvent.sort_by_energy() #TODO: catch case where several solvents occupy the same voxel which should not be the case
+    solvent.get_coord_set()
+    solvent.get_energy()
+    print("\nSolvent coords: \n")
+    print(solvent.coords)
+
+    #read solute.pdb
+    with open('solute.pdb','r') as f: #assumed format of ATOM line: ATOM, ordinal number, label, residue, number, x, y, z, 1.00, energy, element
+        for line in f:
+            if 'ATOM' in line:
+                #solute.elements.append(row[-1]) #not needed LM20231123
+                #solute.atoms.append(np.array([float(r) for r in row[-6:-3]])) #not needed LM20231123
+                #solute.values.append(0.0) #not needed LM20231123
+                solute.data.append(line.split())
+    solute.get_coord_set()
+    solute.get_elements()
+    print("\nSolute coords: \n")
+    print(solute.coords)
+    print("\nSolute elements: \n")
+    print(solute.elements)
+
+    #solute.atoms = np.asarray(solute.atoms) #not needed right now, LM20231123
+    #solute.determine_polar_hydrogen_and_non_hydrogen() #not needed right now, LM20231123
+    #solvent.atoms = np.asarray(solvent.atoms) #maybe needed LM20231123
+
+    #read gist-quats.dat
+    with open('gist-quats.dat','r') as f: #assumed format: header: 3 rows, data: voxel xcoord ycoord zcoord w x y z (several rows per voxel)
+        data = f.readlines()[3:]
+        for line in data: #solvent.quats is prepared in febiss
+            array = np.array([float(line.split()[-4]),float(line.split()[-3]),float(line.split()[-2]),float(line.split()[-1])])
+            solvent.quats[int(line.split()[0])].append(quaternion.from_float_array(array))
+
+
+
+
+
+
+
 
 def main():
     if len(sys.argv) != 2:
@@ -37,47 +93,58 @@ def main():
     with open(arg, 'r') as yamlfile:
         param = yaml.safe_load(yamlfile.read().replace("\t", "  ").replace("    ", "  "))
 
-    # instantiate solvent and solute
-    #solvent = Solvent()
-    solute = Solute()
-
     #path = ..solvents.__path__[0]  # +"/{0}".format(solv_file) #commented out because path is passed to converter
     #converter(path, solv_abb)
 
     # check for header
-    if "header" not in param.keys():
-        water = Input("\n\nCould not find a header in the yaml file. Is water your main solvent? [y/n]\n").yn()
-        if water:
-            tip3p = Input("\n\nDo you use TIP3P water?\n").yn()
-            pyconsolv = False
-        else:
-            tip3p = False
-            pyconsolv = Input("\n\nDid you use one of these solvents from the PyConSolv package "
-                              "(https://github.com/PodewitzLab/PyConSolv/tree/main/src/PyConSolv/solvents)?:\n"
-                              + "   ".join(SOLVENT_LIST)).yn()
+    #if "header" not in param.keys():
+
+        #water = Input("\n\nCould not find a header in the yaml file. Is water your main solvent? [y/n]\n").yn()
+        #if water:
+        #    tip3p = Input("\n\nDo you use TIP3P water?\n").yn()
+        #    pyconsolv = False
+        #else:
+        #    tip3p = False
+        #    pyconsolv = Input("\n\nDid you use one of these solvents from the PyConSolv package "
+        #                      "(https://github.com/PodewitzLab/PyConSolv/tree/main/src/PyConSolv/solvents)?:\n"
+        #                      + "   ".join(SOLVENT_LIST)).yn()
+
+    if "header" in param.keys(): #TODO: change header to case only. no need for header.
+        case = param['header']['case']
     else:
-        water = param["header"]["water"]
-        tip3p = param["header"]["tip3p"]
-        pyconsolv = param["header"]["pyconsolv"]
+        case = 0
+        quit("Something is very wrong with the all-settings.yaml file. Before running febiss, run febiss_settings"
+             "to create the all-settings.yaml file which contain crucial informations to perform a gist analysis.")
 
     # check for gist analysis
     if "gist" in param.keys():
-        from ..utilities.gist import GistAnalyser
-        analyser = GistAnalyser(water, tip3p, pyconsolv, **param["gist"])
 
-        write_solute_pdb(analyser.top,
-                         analyser.trajectory_name+'*'+analyser.trajectory_format,
-                         analyser.solv_abb) #reads out the solute pdb which is needed to create the febissSolventFile.
-                                            #Previously this step was directly done in cpptraj.
+        analyser = GistAnalyser(case, **param["gist"])
 
-        solvent = Solvent(analyser.solv_abb,
-                          analyser.pyconsolv,
-                          analyser.rigid_atom_0,
-                          analyser.rigid_atom_1,
-                          analyser.rigid_atom_2)
+        # solvent = Solvent(analyser.solv_abb,
+        #                   analyser.pyconsolv,
+        #                   analyser.rigid_atom_0,
+        #                   analyser.rigid_atom_1,
+        #                   analyser.rigid_atom_2)
+    else:
+        analyser = GistAnalyser(case)
+        quit("gist parameters are missing in the all-settings.yaml file. Before running febiss, run febiss_settings"
+             "to create the all-settings.yaml file which contain crucial informations to perform a gist analysis.")
 
-        analyser.perform_gist_analysis()
-        analyser.perform_febiss_analysis()
+    # instantiate solvent and solute and reference
+
+    grid_length_0 = int(analyser.grid_lengths.strip('()').split(',')[0]) #TODO: Error prone if grind_lengths is not given as '(x,y,z)'
+    grid_length_1 = int(analyser.grid_lengths.strip('()').split(',')[1])
+    grid_length_2 = int(analyser.grid_lengths.strip('()').split(',')[2])
+
+    nvoxels = grid_length_0*grid_length_1*grid_length_2
+
+    solvent = Solvent(nvoxels=nvoxels)
+    solute = Solute()
+    reference = Reference(analyser.solv_file,analyser.solv_abb,analyser.rigid_atom_0,analyser.rigid_atom_1)
+    #analyser.perform_solute_write_out() #DEPRECATED LM20231124. #new: instead of direct calling write_solute_pdb.py
+    analyser.perform_gist_analysis()
+    analyser.perform_febiss_analysis()
 
     #elif "GIST" in param.keys():
     #    from ..utilities.gist import GistAnalyser
@@ -105,13 +172,12 @@ def main():
         if key.lower() == 'plotting':
             param = param['plotting']
             break
-    #solute = Solute() #info about solute will be given in read_pdb
-    #solvent = Solvent(solv_size) #info about solvent will be given in read_pdb
-    febiss_file = param.get('febiss_file', 'febiss-solvents.pdb')
+
+    febiss_file = param.get('febiss_file', 'febiss.dat') #not needed#changed to febiss.dat
     #read_pdb(febiss_file, solute, solvent) #new reading in procedure will be used LM20231027
-    read_febiss_file(febiss_file)
+    read_data(febiss_file, solute, solvent)
     display = Plot(**param)
-    filename = display.gui(solute, solvent)
+    filename = display.gui(analyser.solv_abb, solute, solvent, reference)
     if which('pymol') is not None:
         style_file = param.get('style_file', write_style_file())
         subprocess.call(['pymol', filename, style_file])

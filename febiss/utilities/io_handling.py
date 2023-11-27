@@ -8,36 +8,37 @@ See LICENSE for details
 
 from typing import Union
 import numpy as np
+import os
 
-from ..utilities.structures import *
+from ..utilities.structures import Solute, Solvent, Reference
 
 
-def read_pdb(pdb, solute: Solute, solvent: Solvent):
-    with open(pdb, 'r') as f:
-        for line in f:
-            if 'HETATM' in line:
-                row = line.split()
-                solvent.elements.append(row[-1])
-                solvent.atoms.append(np.array([float(r) for r in row[-6:-3]]))
-                if row[2] == solvent.rigid_atom_0: #Changed from row[-1] (which contains the ambiguous element name) to row[2] which contains the atom label. TODO: Update pdb file generation in CPPTRAJ
-                    solvent.values.append(-1 * float(row[-2]))
-                    for i in range(solvent.size): #adds the tempfactor/energy value for each solvent atom
-                        solvent.all_values.append(-1 * float(row[-2]))
+# def read_pdb(pdb, solute: Solute, solvent: Reference):
+#     with open(pdb, 'r') as f:
+#         for line in f:
+#             if 'HETATM' in line:
+#                 row = line.split()
+#                 solvent.elements.append(row[-1])
+#                 solvent.atoms.append(np.array([float(r) for r in row[-6:-3]]))
+#                 if row[2] == solvent.rigid_atom_idx_0: #Changed from row[-1] (which contains the ambiguous element name) to row[2] which contains the atom label. TODO: Update pdb file generation in CPPTRAJ
+#                     solvent.values.append(-1 * float(row[-2]))
+#                     for i in range(solvent.size): #adds the tempfactor/energy value for each solvent atom
+#                         solvent.all_values.append(-1 * float(row[-2]))
+#
+#                 #elif row[-1] != 'H':
+#                 #    raise NotImplementedError("ERROR: NON-solvent HETATM present in pdb file")
+#             elif 'ATOM' in line:
+#                 row = line.split()
+#                 solute.elements.append(row[-1])
+#                 solute.atoms.append(np.array([float(r) for r in row[-6:-3]]))
+#                 solute.values.append(0.0)
+#
+#     solute.atoms = np.asarray(solute.atoms)
+#     solute.determine_polar_hydrogen_and_non_hydrogen()
+#     solvent.atoms = np.asarray(solvent.atoms)
+#     solvent.sort_by_value()
 
-                #elif row[-1] != 'H':
-                #    raise NotImplementedError("ERROR: NON-solvent HETATM present in pdb file")
-            elif 'ATOM' in line:
-                row = line.split()
-                solute.elements.append(row[-1])
-                solute.atoms.append(np.array([float(r) for r in row[-6:-3]]))
-                solute.values.append(0.0)
-
-    solute.atoms = np.asarray(solute.atoms)
-    solute.determine_polar_hydrogen_and_non_hydrogen()
-    solvent.atoms = np.asarray(solvent.atoms)
-    solvent.sort_by_value()
-
-def read_febiss_file(febiss_file : str, )
+# def read_febiss_file(febiss_file : str, )
 
 
 def write_pdb(pdb: str, structure: Union[Solute, Solvent], abb, solute: bool = False):
@@ -58,7 +59,7 @@ def write_pdb(pdb: str, structure: Union[Solute, Solvent], abb, solute: bool = F
         if solute:
             j.append('SOL'.ljust(3))  # resname#1s
         else:
-            j.append(abb.ljust(3))  # resname#1s abb instead off "FEB"
+            j.append(abb.ljust(3))  # resname#1s abb instead of "FEB"
         j.append('A'.rjust(1))  # Astring
         if solute:
             j.append('1'.rjust(4))  # resnum
@@ -161,4 +162,3 @@ class Input:
             print("The input does not fit the requirements, must be " + str(self.form.__name__))
             self.input = input(self.prompt + "\n")
             self.__assertion()
-

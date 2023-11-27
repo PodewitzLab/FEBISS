@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sys
 
-from ..utilities.structures import Solute, Solvent
+from ..utilities.structures import Solute, Solvent, Reference
 from ..utilities.distance_functions import distance_squared
 from ..utilities.io_handling import write_pdb
 from .rdf import ButtonActions
@@ -34,7 +34,7 @@ class Plot:
             if key not in self.allowed_keys:
                 warn('WARNING: Did not recognize key: ' + str(key))
 
-    def gui(self, solute: Solute, solvent: Solvent) -> str:
+    def gui(self, abb, solute: Solute, solvent: Solvent, reference: Reference) -> str:
         if not self.testing:
             self._determine_hetero_elements(solute)
             barcolors = self._determine_colors(solute, solvent)
@@ -47,12 +47,12 @@ class Plot:
         if -1 in self.selected_solvents:
             self.selected_solvents.remove(-1)
         self._interactive_reselection(solute, solvent)
-        filename = self._save_selection(solute, solvent)
+        filename = self._save_selection(abb, solute, solvent, reference)
         return filename
 
     def _set_defaults(self):
         # default values for bar chart
-        self.selected_solvents = []
+        self.selected_solvents = [] #get written in class ClickableBar #LM20231123
         self.cutoff1 = 3.0 #distance between solute and solvent
         self.cutoff2 = 6.0 #distance between solute and solvent
         self.displayed_solvents = 50
@@ -70,7 +70,7 @@ class Plot:
         self.number_xtics = 10
         self.y_numbers = 0.25
         self.marks = []
-        self.febiss_file = 'febiss-solvents.pdb'
+        self.febiss_file = 'febiss.dat' #changed from febiss-solvents.pdb LM20231123
         self.rdf_names = {'center2': 'center of solute', 'C': 'carbon', 'O': 'oxygen', 'N': 'nitrogen', 'P': 'phosphor'}
         self.transparent = True
         self.display_once = False
@@ -92,42 +92,44 @@ class Plot:
         squared_cutoff2 = self.cutoff2 ** 2
         # if distance between two solvent atoms below this,
         # they belong to same solvent molecule, but they have to be in pdb file within 2 rows)
-        same_solvent_cutoff = 1.6
-        squared_same_solvent_cutoff = same_solvent_cutoff ** 2
-        if len(solute.polars) == 0:
-            solute.determine_polar_hydrogen_and_non_hydrogen() #gives all non-H atoms and polar hydrogen. Attention - unclear whether using the polar cut-off for H as done here is valid LM20231027
+        # same_solvent_cutoff = 1.6 #not needed since per solvent only the com is given LM20231123
+        #squared_same_solvent_cutoff = same_solvent_cutoff ** 2 #not needed since per solvent only the com is given LM20231123
+        #if len(solute.polars) == 0: #not needed since the distance between solvent and solute will be measured between solvent COM and the nearest solute atom regardless of polarity
+        #    solute.determine_polar_hydrogen_and_non_hydrogen() #gives all non-H atoms and polar hydrogen. Attention - unclear whether using the polar cut-off for H as done here is valid LM20231027
         within_cutoff = []
         between_cutoffs = []
         outside_cutoff2 = []
         """ cycle over solvents and assign to list for each polar solute atom """
-        skip_next = False
-        skip_next_next = False
-        for count, sol in enumerate(solvent.atoms): #this iterates through all atoms of the febiss_solvents.pdb which are marked with "HETATM" therefore either H or O information. LM20231027
-            if skip_next:
-                if skip_next_next:
-                    skip_next_next = False
-                    continue
-                else:
-                    skip_next = False
-                    continue
-            for polar in solute.polars:
-                if distance_squared(polar, sol) < squared_cutoff1:
+        #skip_next = False #not needed LM20231123
+        #skip_next_next = False #not needed LM20231123
+        for count, sol in enumerate(solvent.coords): #this iterates through all atoms of the febiss_solvents.pdb which are marked with "HETATM" therefore either H or O information. LM20231027
+            #if skip_next: #this and next 6 lines not needed LM20231123
+            #    if skip_next_next:
+            #        skip_next_next = False
+            #        continue
+            #    else:
+            #        skip_next = False
+            #        continue
+            for atom in solute.coords: #changed from: "for polar in solute.polars:" LM20231123
+                if distance_squared(atom, sol) < squared_cutoff1: #changed from polar to atom LM20231123
                     within_cutoff.append(count)
                     # relies on atoms of same solvent molecule to be right after each other in pdb!
-                    for i in range(-2, 3):
-                        # bound check and then distance
-                        if i != 0 and len(solvent.elements) > count + i > 0 \
-                                and distance_squared(sol, solvent.atoms[count + i]) < squared_same_solvent_cutoff:
-                            within_cutoff.append(count + i)
-                            if i == 1:
-                                skip_next = True
-                            elif i == 2:
-                                skip_next_next = True
+                    #for i in range(-2, 3): #this and next 8 lines not needed because there is just one entry (the COM) per solvent and not several atoms LM20231123
+                    #    # bound check and then distance
+                    #    if i != 0 and len(solvent.elements) > count + i > 0 \
+                    #            and distance_squared(sol, solvent.atoms[count + i]) < squared_same_solvent_cutoff:
+                    #        within_cutoff.append(count + i)
+                    #        if i == 1:
+                    #            skip_next = True
+                    #        elif i == 2:
+                    #            skip_next_next = True
                     break  # close enough solute atom was found for solvent within cutoff -> break loop over solute atoms
-                elif distance_squared(polar, sol) > squared_cutoff2:
+                elif distance_squared(atom, sol) > squared_cutoff2: #changed from polar to atom LM20231123
                     outside_cutoff2.append(count)
                 else:
                     between_cutoffs.append(count)
+
+
 
         """ delete multiple entries """
         within_cutoff = list(OrderedDict.fromkeys(within_cutoff))
@@ -150,15 +152,15 @@ class Plot:
                 if outside == between:
                     outside_cutoff2.remove(outside)
         """ set colors """
-        barcolors = [self.colors['outside']] * len(solvent.elements)
+        barcolors = [self.colors['outside']] * len(solvent.coords) #changed from solvent.elements which contained H,H,O for one water molecule and therefore 3*nsolvent entries
         for within in within_cutoff:
-            if solvent.elements[within] == "O":
-                index = int(round(within / 3))
-                barcolors[index] = self.colors['within']
+            #if solvent.elements[within] == "O": #not needed since just one entry per solvent LM20231123
+            #    index = int(round(within / 3)) #not needed since just one entry per solvent LM20231123
+                barcolors[within] = self.colors['within']
         for outside in between_cutoffs:
-            if solvent.elements[outside] == "O":
-                index = int(round(outside / 3))
-                barcolors[index] = self.colors['between']
+            #if solvent.elements[outside] == "O": #same as above LM20231123
+            #    index = int(round(outside / 3)) #same as above LM20231123
+                barcolors[outside] = self.colors['between']
 
         return barcolors
 
@@ -183,7 +185,7 @@ class Plot:
     # creates interactive bar plot
     def _create_plot(self, barcolors: List[str], solvent: Solvent, save_selected: bool):
         plt.ioff()
-        indices = np.arange(1, len(solvent.values) + 1)  # x-values
+        indices = np.arange(1, len(solvent.values) + 1) # x-values
         fig = plt.figure(figsize=(self.width, self.height))
         ax = fig.add_subplot(111)
         rects = ax.bar(indices, solvent.values, color=barcolors, picker=True)  # create bars
@@ -246,7 +248,15 @@ class Plot:
             xstep = 1
 
         # set tics and limits
+        print("xmax = {0}".format(xmax))
+        print("xstep = {0}".format(xstep))
+        print("ymin = {0}".format(ymin))
+        print("ymax = {0}".format(ymax))
+        print("ystep = {0}".format(ystep))
         plt.xticks(np.arange(0, xmax + xstep, step=xstep))
+        if ymin == ymax == 0.0: #TODO: Change to try-except to catch if ymax == ymin. LM20231127
+            ymax = 1
+            ystep = 0.1
         plt.yticks(np.arange(ymin, ymax + ystep, step=ystep))
         ax.set_ylim([ymin, ymax])
         ax.set_xlim([xmin, xmax])
@@ -357,7 +367,7 @@ class Plot:
             else:  # solvent were selected, reselection of parameters are not necessary
                 selected = True
 
-    def _save_selection(self, solute: Solute, solvent: Solvent) -> str:
+    def _save_selection(self, abb, solute: Solute, solvent: Solvent, reference: Reference) -> str:
         print('Number of solvents chosen: ' + str(len(self.selected_solvents)))
         filename = 'solvated_structure-' + str(len(self.selected_solvents)) + '.pdb'
         print('Your microsolvated structure is written to: ' + filename)
@@ -371,18 +381,26 @@ class Plot:
         with open("latest-solvation.log", "a") as latest:
             latest.write(filename + '\n')
         # writes file with solute and selected solvents
-        write_pdb(filename, solute, solute=True, )
+        write_pdb(filename, solute, abb, solute=True) #writes only the solute into the pdb-file LM20231123
         selected_solvent = Solvent()
-        for select in self.selected_solvents:
-            selected_solvent.atoms.append(solvent.atoms[select * 3])
-            selected_solvent.atoms.append(solvent.atoms[select * 3 + 1])
-            selected_solvent.atoms.append(solvent.atoms[select * 3 + 2])
-            selected_solvent.values.append(solvent.all_values[select * 3])
-            selected_solvent.values.append(solvent.all_values[select * 3 + 1])
-            selected_solvent.values.append(solvent.all_values[select * 3 + 2])
-            selected_solvent.elements.append('O')
-            selected_solvent.elements.append('H')
-            selected_solvent.elements.append('H')
+
+        for select in self.selected_solvents: #TODO: Check if selected_solvents order coincides with order of solvent.coord entries, i.e. are solvent.coord entries sorted wrt their energy
+            voxel = solvent.data[select][0] #new LM20231123
+            quats = solvent.quats[voxel] #new LM20231123
+            com = (solvent.data[select][1],solvent.data[select][2],solvent.data[select][3]) #new LM20231123
+            elements, coords = reference._find_avg_solvent(voxel,quats,com,verbose=True) #new LM20231123. This finally determines the solvent to be placed.
+            values = solvent.data[select][-1] #new LM20231124
+            selected_solvent.elements.append(elements)
+            selected_solvent.coords.append(coords) #changed from select * 3 in brackets LM20231123
+            #selected_solvent.atoms.append(solvent.atoms[select * 3 + 1]) #not needed since only the com coordinate is considered LM20231123
+            #selected_solvent.atoms.append(solvent.atoms[select * 3 + 2])
+            selected_solvent.values.append(values) #changed from select * 3 in brackets LM20231123
+            #selected_solvent.values.append(solvent.all_values[select * 3 + 1]) #not needed since only the com coordinate is considered LM20231123
+            #selected_solvent.values.append(solvent.all_values[select * 3 + 2]) #not needed since only the com coordinate is considered LM20231123
+            #selected_solvent.elements.append('O') #not needed LM20231123
+            #selected_solvent.elements.append('H') #not needed LM20231123
+            #selected_solvent.elements.append('H') #not needed LM20231123
+
         write_pdb(filename, selected_solvent)
         return filename
 
