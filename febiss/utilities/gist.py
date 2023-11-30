@@ -44,14 +44,13 @@ class GistAnalyser:
     # we cannot deal with user defined solvents yet.
 
     def __init__(self, case = 0, com = False, **kwargs):
-        self._set_defaults(case,com)
+        self._set_defaults(case, com)
 
         #set required keys
-        self.required_keys = {'top', 'trajectory_file'} #changed to trajectory_file since trajectory_format is not used anymore LM20231115
-        if case in [2,3]: #also in case two with a custom water file, one has to define the rigid atoms.
+        self.required_keys = {'top', 'trajectory_file', 'solv_file'} #new LM20231128: also case 1 needs solv_file (TP3.xyz in febiss/solvents). #changed to trajectory_file since trajectory_format is not used anymore LM20231115
+        if case in [2, 3]: #also in case two with a custom water file, one has to define the rigid atoms.
             self.required_keys.update(['refdens',
                                        'solv_abb',
-                                       'solv_file',
                                        'rigid_atom_0',
                                        'rigid_atom_1',
                                        'rigid_atom_2'
@@ -67,14 +66,13 @@ class GistAnalyser:
         #set allowed keys
         self.allowed_keys = {'frame_selection', 'grid_center', 'grid_spacing', 'grid_lengths',
                              'refdens', 'solute_residues', 'gist_cpptraj_command_file', 'gist_out_file', 'rdf', 'rdf_names',
-                             'gist_grid_file', 'solv_abb', 'solv_file', 'rigid_atom_0','rigid_atom_1','rigid_atom_2' #'char_angle', 'trajectory_format',
+                             'gist_grid_file', 'solv_abb', 'solv_file', 'rigid_atom_0', 'rigid_atom_1', 'rigid_atom_2' #'char_angle', 'trajectory_format',
                              } # changed back to 3 possible rigid atoms since the user shall be able to choose whether to use the com or a central atom LM20231116
                                # #only 2 rigid atoms since COM will be used
-        if case in [2,3]:
+        if case in [2, 3]:
             self.allowed_keys.difference_update([
                 'refdens',
                 'solv_abb',
-                'solv_file',
                 'rigid_atom_0',
                 'rigid_atom_1',
                 'rigid_atom_2'
@@ -86,12 +84,12 @@ class GistAnalyser:
         if case == 1 and com:
             self.__dict__['rigid_atom_0'] = 'COM'
 
-        if case in [2,3] and com:
+        if case in [2, 3] and com:
             self.__dict__['rigid_atom_0'] = -1
 
     def perform_solute_write_out(self): #DEPRECATED LM20231124. Solute.pdb is now created after the gist analysis. The commands for cpptraj are now part of the gist.in file.
         #new: executes cpptraj to write out solute.pdb from solute.in which is created with utilities.write_solute_pdb.py
-        solute_in = write_solute_pdb(self.top,self.trajectory_file,self.solv_abb)
+        solute_in = write_solute_pdb(self.top, self.trajectory_file, self.solv_abb)
         self._execute_cpptraj(solute_in)
         if not os.path.exists('solute.pdb'):
             raise UnsuccessfulAnalysisException(
@@ -152,18 +150,19 @@ class GistAnalyser:
         self.solv_file = CASE_DICT[case] #stores the name of the solvent file
         self.solv_abb = None #stores the abbreviation of the solvent molecule
         #self.solv_size = 3
-        self.rigid_atom_0 = 'O'
-        self.rigid_atom_1 = 'H'
-        self.rigid_atom_2 = 'H'
+        self.rigid_atom_0 = 'O' #TODO: Change to 1 as default? LM20231128
+        self.rigid_atom_1 = 'H' #TODO: Change to 2 as default? LM20231128
+        self.rigid_atom_2 = 'H' #TODO: Change to 3 as default? LM20231128
         #changed back to 3 rigid atoms since the user shall be able to choose whether COM is used or not LM20231116 #only two rigid atoms since COM will be used
         self.frame_selection = None
         self.grid_center = None
         #self.trajectory_format = "cdf" #not used anymore LM20231115
         self.grid_spacing = 0.5
         self.grid_lengths = (60, 60, 60)
-        if self.case in [1,2]:
+        if self.case in [1, 2]:
             self.refdens = 0.0329  # tip3p
-            self.char_angle = 104.57  # tip3p
+            #self.char_angle not needed anymore since tip3p water is given as xyz file. LM20231128
+            #self.char_angle = 104.52  # tip3p #changed from 104.57 according to Jorgensen et al., The Journal of Chemical Physics 1983, 79 (2), 926–935. https://doi.org/10.1063/1.445869. LM20231128
         else:
             self.refdens = None#Input("Provide reference density as float:\n", type=float)
             #self.char_angle = None#Input("Provide characteristic angle as float:\n", type=float)
@@ -176,7 +175,7 @@ class GistAnalyser:
         self.febiss_cpptraj_command_file = 'febiss.in'  # new. LM20231005
         self.gist_out_file = 'gist-output.dat'
         self.gist_grid_file = 'gist_grid.xyz'
-        self.rdf = True
+        self.rdf = False #Changed from True to False as default. LM20231128
         self.rdf_names = {'center2': 'center of solute', 'C': 'carbon', 'O': 'oxygen', 'N': 'nitrogen', 'P': 'phosphor'} #TODO: sense?
 
     def _write_gist_cpptraj_file(self): #this creates the content for gist.in. renamed from _write_cpptraj_file(). LM20231005
@@ -241,7 +240,7 @@ class GistAnalyser:
             #f.write('febiss ' + str(self.temp) + '\n')  # enables febiss placement in cpptraj
             f.write('run\n')
             f.write('center :1 origin\n') #new LM20231124
-            f.write('strip :DCM\n') #new LM20231124
+            f.write('strip :{0}\n'.format(self.solv_abb)) #new LM20231124
             f.write('trajout solute.pdb onlyframes 1\n') #new LM20231124
             f.write('run') #new LM20231124
 

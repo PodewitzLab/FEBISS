@@ -55,7 +55,7 @@ def main():
         else:
             case = 4
 
-    if case in [1,2,3] and Input("\nDo you want to use the center of mass (COM)? [y/n]").yn():
+    if case in [1, 2, 3] and Input("\nDo you want to use the center of mass (COM)? [y/n]").yn():
         com = True
     else:
         com = False
@@ -63,7 +63,12 @@ def main():
     from ..utilities.gist import GistAnalyser
         # the arguments are necessary in the init, otherwise exception
     if case == 1:
-        analyser = GistAnalyser(case, com, **{'top': 'SOLVBOX_TOPOLOGY', 'trajectory_file': 'TRAJECTORY'}) #changed from tracectory_name to trajectory_file LM20231115
+        CASE_DICT[1] = os.path.abspath(os.path.join(__file__, "../../solvents/TP3.xyz")) #new LM20231128 #https://stackoverflow.com/questions/27844088/python-get-directory-two-levels-up (accessed 14 Nov 2023).
+        analyser = GistAnalyser(case, com, **{'top': 'SOLVBOX_TOPOLOGY',
+                                              'trajectory_file': 'TRAJECTORY',
+                                              'solv_abb': 'WAT',
+                                              'solv_file': CASE_DICT[1] #new LM20231128
+                                              }) #changed from tracectory_name to trajectory_file LM20231115
         #solv_file = False #DEPRECATED LM20231114
 
     elif case == 2:
@@ -127,9 +132,10 @@ def main():
                 f.write('  ' + str(key) + ": " + str(analyser.__dict__[key]) + '\n') # no check required since -1 is a necessary value when using com then
             elif case == 3 and com and key == 'rigid_atom_0':
                 f.write('  ' + str(key) + ": " + str(analyser.__dict__[key]) + '\n') # no check required since -1 is a necessary value when using com then
-            elif case == 3 and key in ['solv_abb','solv_file','rigid_atom_1','rigid_atom_2']: # if pyconsolv solvents are
+            elif case in [1, 3] and key in ['solv_abb','solv_file','rigid_atom_1','rigid_atom_2']: # if pyconsolv solvents are
                 # used, solv_abb is typically the 3 letter abbreviation given as input. it has to be checked nonetheless
                 # just like the file path and the rigid_atom indices. LM20231114
+                #new: LM20231128 also case 1 now needs a reference file. Path to TP3.xyz is given.
                 f.write('  ' + str(key) + ": " + str(analyser.__dict__[key]) + ' # please check if this is correct\n')
             else:
                 f.write('  ' + str(key) + ": " + str(analyser.__dict__[key]) + ' # this has to be filled out\n')

@@ -382,26 +382,26 @@ class Plot:
             latest.write(filename + '\n')
         # writes file with solute and selected solvents
         write_pdb(filename, solute, abb, solute=True) #writes only the solute into the pdb-file LM20231123
-        selected_solvent = Solvent()
+        selected_solvent = Solvent() #info: this object finally contains all element labels, coords and values of all selected solvents. LM20231130
 
         for select in self.selected_solvents: #TODO: Check if selected_solvents order coincides with order of solvent.coord entries, i.e. are solvent.coord entries sorted wrt their energy
-            voxel = solvent.data[select][0] #new LM20231123
+            voxel = int(solvent.data[select][0]) #new LM20231123. LM20231130: type conversion from str to int. TODO: Type conversion prone to ValueError
             quats = solvent.quats[voxel] #new LM20231123
-            com = (solvent.data[select][1],solvent.data[select][2],solvent.data[select][3]) #new LM20231123
-            elements, coords = reference._find_avg_solvent(voxel,quats,com,verbose=True) #new LM20231123. This finally determines the solvent to be placed.
-            values = solvent.data[select][-1] #new LM20231124
-            selected_solvent.elements.append(elements)
-            selected_solvent.coords.append(coords) #changed from select * 3 in brackets LM20231123
+            com = (float(solvent.data[select][1]), float(solvent.data[select][2]), float(solvent.data[select][3])) #new LM20231123. LM20231130: conversion from str to int. TODO: Prone to ValueError.
+            elements, coords = reference._find_avg_solvent(voxel, quats, com, verbose=True) #new LM20231123. This finally determines the solvent to be placed.
+            values = float(solvent.data[select][-1]) #new LM20231124. #LM20231130 conversion from str to float
+            selected_solvent.elements.extend(elements) #changed from append which does not work since elements is a list itself. LM20231130
+            selected_solvent.coords.extend(coords) #changed from select * 3 in brackets LM20231123. #changed from append which does not work since elements is a list itself. LM20231130
             #selected_solvent.atoms.append(solvent.atoms[select * 3 + 1]) #not needed since only the com coordinate is considered LM20231123
             #selected_solvent.atoms.append(solvent.atoms[select * 3 + 2])
-            selected_solvent.values.append(values) #changed from select * 3 in brackets LM20231123
+            selected_solvent.values.extend([values]*len(elements)) #changed from select * 3 in brackets LM20231123 #needs as many entries as there are elements in the solvent. Therefore changed from append(values) to extend([values]*len(elements))
             #selected_solvent.values.append(solvent.all_values[select * 3 + 1]) #not needed since only the com coordinate is considered LM20231123
             #selected_solvent.values.append(solvent.all_values[select * 3 + 2]) #not needed since only the com coordinate is considered LM20231123
             #selected_solvent.elements.append('O') #not needed LM20231123
             #selected_solvent.elements.append('H') #not needed LM20231123
             #selected_solvent.elements.append('H') #not needed LM20231123
 
-        write_pdb(filename, selected_solvent)
+        write_pdb(filename, selected_solvent, abb, solute=False)
         return filename
 
 

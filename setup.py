@@ -59,7 +59,9 @@ setup(
     package_data={
         'febiss': [
             'manual/*',
-            'solvents/*.mol2'
+            'solvents/*.mol2',
+            'solvents/TP3.xyz'
+
         ]
     },
     py_modules=[

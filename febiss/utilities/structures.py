@@ -63,18 +63,46 @@ class Reference:
     This class contains all necessary information on the used solvent and has methods
     to deal with quaternions and equivalent structures.
     """
-    def __init__(self, solv_file = None, abb : str = "WAT", rigid_atom_0 : int = 0, rigid_atom_1 : int = 1): #only 2 rigid_atoms LM20231113. #before 25 September 2023: __init__(self, top, abb, size, rigid_atom_0, rigid_atom_1, rigid_atom_2):
+    def __init__(self, case, com, solv_file = None, abb : str = "WAT", rigid_atom_0 : int = 0, rigid_atom_1 : int = 1, rigid_atom_2 : int = 2): #3 rigid atoms again as of 28 Nov 2023 to account for case 1. only 2 rigid_atoms LM20231113. #before 25 September 2023: __init__(self, top, abb, size, rigid_atom_0, rigid_atom_1, rigid_atom_2):
         #self.top = top #can be None if using water
-        self.solv_file = solv_file #contains path to mol2-file
+        self.solv_file = solv_file #contains path to mol2-file, new LM20231128: can also contain path to TP3.xyz file
         self.abb = abb  # can be None if using water
-        self.xyz_path = converter(os.path.dirname(self.solv_file), self.abb)
-        self.refdir_path = None #new LM20231124. Gets defined in _process_equivalent_structures()
-        self.mol = Molecule.from_file(self.xyz_path) #pymatgen interface. converter is from mol2_to_xyz and returns path of generated xyz-file. TODO: take care of water!
-        self. cmol = self.mol.get_centered_molecule()
-        self.rigid_atom_idx_0 = rigid_atom_0 #1 = O if using water
-        self.rigid_atom_idx_1 = rigid_atom_1 #2 = H if using water
-        #self.rigid_atom_idx_2 = rigid_atom_2 #3 = H if using water
-        self.char_q = calc_quats(self.cmol,self.rigid_atom_idx_0,self.rigid_atom_idx_1)
+
+        if case == 1: #for case 1 we use TP3.xyz directly. No need for converter. LM20231128.
+            self.xyz_path = solv_file
+        else:
+            self.xyz_path = converter(os.path.dirname(self.solv_file), self.abb) #converter is from mol2_to_xyz and returns path of generated xyz-file.
+
+        self.refdir_path = None #new LM20231124. Gets defined in _process_equivalent_structures(). Contains path to parent directory.
+        self.mol = Molecule.from_file(self.xyz_path) #pymatgen interface
+        self.cmol = self.mol.get_centered_molecule()
+
+        if case == 1: #new LM20231128
+            #self.rigid_atom_idx_0 = None #1 = O if using water #used for testing if everything went well TODO: Implement com = False case. LM20231128
+            self.rigid_atom_idx_1 = None #used for testing if everything went well
+            self.rigid_atom_idx_2 = None #used for testing if everything went well
+            if type(rigid_atom_1) == str and type(rigid_atom_2) == str: #if for some reason indices are given instead of atom names
+                first = False #if H and H are chosen as rigid atoms
+                for atom in range(len(self.mol.labels)):
+                    if not first and rigid_atom_1 == self.mol.labels[atom]:
+                        self.rigid_atom_idx_1 = atom
+                        first = True
+                    elif rigid_atom_2 == self.mol.labels[atom]:
+                        self.rigid_atom_idx_2 = atom
+                if self.rigid_atom_idx_1 == None or self.rigid_atom_idx_2 == None:
+                    quit("Something is wrong with declaring the rigid atoms. Please check all-settings.yaml!")
+            else:
+                # self.rigid_atom_idx_0 = rigid_atom_0  # 1 = O if using water TODO: Implement com = False case. LM20231128
+                self.rigid_atom_idx_1 = rigid_atom_1  # 2 = H if using water
+                self.rigid_atom_idx_2 = rigid_atom_2 #3 = H if using water
+        else:
+            # self.rigid_atom_idx_0 = rigid_atom_0 #1 = O if using water
+            self.rigid_atom_idx_1 = rigid_atom_1 #2 = H if using water
+            self.rigid_atom_idx_2 = rigid_atom_2 #3 = H if using water TODO: Implement com = False case. LM20231128
+
+        print("Using rigidatoms {0} and {1} for quaternion determination!".format(self.rigid_atom_idx_1, self.rigid_atom_idx_2))
+
+        self.char_q = calc_quats(self.cmol, self.rigid_atom_idx_1, self.rigid_atom_idx_2)
 
         #placement
         self.eq_dict = {} #new. stores 1) the rotation quat, 2) the equivalent structure as Molecule object and 3) the characteristic quat for the orientation of the molecule as tuple per symm_op. LM20231113
@@ -103,7 +131,7 @@ class Reference:
             os.makedirs(path)
         return os.path.abspath(path)
 
-    def _process_equivalent_structures(self,write_out: bool = True):
+    def _process_equivalent_structures(self, write_out: bool = True):
 
         """
         analyzes the given solvent, gives coordinates for equivalent structures and sets the following:
@@ -132,12 +160,13 @@ class Reference:
             write(self.xyz_path, return_path, coord_list)
             ref = Molecule.from_file(return_path.format(num))
 
-            char_quat = calc_quats(ref,self.rigid_atom_idx_0,self.rigid_atom_idx_1)
+            char_quat = calc_quats(ref, self.rigid_atom_idx_1, self.rigid_atom_idx_2) #LM20231128: Changed from rigid_atom_0/1 to ..._1/2
 
 
             if distance(self.char_q,char_quat) < 0.05: #0.05 rad is around 3.18°
                 os.rename(return_path,self.refdir_path+"/{0}".format(self.abb)+"_ori.xyz")
-                #continue #the original orientation has been found. no entry in eq_dict
+                #continue #the original orientation has been found. LM20231130: now also entry in eq_dict.
+                self.eq_dict[num] = (rot_quat, ref, char_quat) #new LM20231130: now also for the identity there is an entry in eq_dict. This facilitates the quaternion cleanup in _find_avg_solvent.
 
             else:
                 self.eq_dict[num] = (rot_quat, ref, char_quat)
@@ -162,36 +191,37 @@ class Reference:
         """
         #step 1)
         key_list = list(self.eq_dict.keys())
+        print(key_list)
         for i in range(len(quats)):
             distance_list = []
             for j in range(len(key_list)):
-                distance_list.append(distance(quats[i], self.eq_dict[key_list[i]][2]))
+                distance_list.append(distance(quats[i], self.eq_dict[key_list[j]][2]))
 
             if verbose:
-                print("quat: {0}".format(i))
+                print("\n\nquat: {0}".format(i))
                 print("distance_list: {0}".format(distance_list))
 
             min_idx = distance_list.index(min(distance_list)) #source: https://stackoverflow.com/questions/52294174/python-finds-the-index-of-the-smallest-element-in-the-list-a-from-index-k-onwa (accessed 24 November 2023)
 
             if verbose:
-                print("min_idx: {0}\n".format(min_idx))
-                print("quats[i] before clean-up: {0}".format(quats[i]))
+                print("min_idx: {0}".format(min_idx))
+                print("quats[{1}] before clean-up: {0}".format(quats[i],i))
 
-            quats[i] = quats[i] * inv(self.char_q) * self.eq_dict[min_idx] * self.char_q
+            quats[i] = quats[i] * inv(self.char_q) * self.eq_dict[min_idx][0] * self.char_q
 
             if verbose:
-                print("quats[i] after clean-up: {0}".format(quats[i]))
-                print("distance now: {0}".format(distance(quats[i], self.eq_dict[key_list[i]][2])))
+                print("quats[{1}] after clean-up: {0}".format(quats[i],i))
+                print("distance now: {0}".format(distance(quats[i], self.eq_dict[key_list[min_idx]][2])))
 
         #step 2)
         q_avg = quat.from_float_array(avg(create_Q_matrix(quats)))
 
         #step 3) and 4)
         qt = q_avg * inv(self.char_q) #quaternion for rotation of original orientation to orientation described by q_avg
-        new_coords = new_coord_gen(self.cmol,qt,np.array(com))
+        new_coords = new_coord_gen(self.cmol, qt, np.array(com))
 
         if verbose:
-            write(self.xyz_path,self._makedir("quats")+"/avg_at_voxel_{0}",new_coords,voxel)
+            write(self.xyz_path, self._makedir("quats")+"/avg_at_voxel_{0}", new_coords, voxel)
 
         return self.cmol.labels, new_coords
 

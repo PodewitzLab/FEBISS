@@ -48,7 +48,9 @@ def write_pdb(pdb: str, structure: Union[Solute, Solvent], abb, solute: bool = F
     else:
         atomcounter = len(open(pdb, 'r').readlines()) + 1
         f = open(pdb, 'a')
-    for count, (ele, atom) in enumerate(zip(structure.elements, structure.atoms)):
+        print(structure.elements)
+        print(structure.coords)
+    for count, (ele, atom) in enumerate(zip(structure.elements, structure.coords)): #changed from structure.atoms LM20231130
         j = []
         if solute:
             j.append('ATOM'.ljust(6))  # atom#6s
@@ -69,7 +71,11 @@ def write_pdb(pdb: str, structure: Union[Solute, Solvent], abb, solute: bool = F
         j.append(str('%8.3f' % (float(atom[1]))).rjust(8))  # y
         j.append(str('%8.3f' % (float(atom[2]))).rjust(8))  # z
         j.append(str('%6.2f' % 1.0).rjust(6))  # occ
-        value = float(structure.values[count])
+        if solute: #new LM20231130: introduced since solute does not have an attribute "values" anymore
+            value = 0.0
+        else:
+            print(structure.values[count])
+            value = float(structure.values[count])
         if value == 0.0:
             j.append(str('%7.2f' % value).ljust(7))  # delta G
         else:

@@ -109,17 +109,19 @@ def main():
         #                      "(https://github.com/PodewitzLab/PyConSolv/tree/main/src/PyConSolv/solvents)?:\n"
         #                      + "   ".join(SOLVENT_LIST)).yn()
 
-    if "header" in param.keys(): #TODO: change header to case only. no need for header.
+    if "header" in param.keys():
         case = param['header']['case']
+        com = param['header']['com']
     else:
         case = 0
+        com = False
         quit("Something is very wrong with the all-settings.yaml file. Before running febiss, run febiss_settings"
              "to create the all-settings.yaml file which contain crucial informations to perform a gist analysis.")
 
     # check for gist analysis
     if "gist" in param.keys():
 
-        analyser = GistAnalyser(case, **param["gist"])
+        analyser = GistAnalyser(case, com, **param["gist"])
 
         # solvent = Solvent(analyser.solv_abb,
         #                   analyser.pyconsolv,
@@ -127,7 +129,7 @@ def main():
         #                   analyser.rigid_atom_1,
         #                   analyser.rigid_atom_2)
     else:
-        analyser = GistAnalyser(case)
+        analyser = GistAnalyser(case, com)
         quit("gist parameters are missing in the all-settings.yaml file. Before running febiss, run febiss_settings"
              "to create the all-settings.yaml file which contain crucial informations to perform a gist analysis.")
 
@@ -136,12 +138,11 @@ def main():
     grid_length_0 = int(analyser.grid_lengths.strip('()').split(',')[0]) #TODO: Error prone if grind_lengths is not given as '(x,y,z)'
     grid_length_1 = int(analyser.grid_lengths.strip('()').split(',')[1])
     grid_length_2 = int(analyser.grid_lengths.strip('()').split(',')[2])
-
     nvoxels = grid_length_0*grid_length_1*grid_length_2
 
     solvent = Solvent(nvoxels=nvoxels)
     solute = Solute()
-    reference = Reference(analyser.solv_file,analyser.solv_abb,analyser.rigid_atom_0,analyser.rigid_atom_1)
+    reference = Reference(case, com, analyser.solv_file, analyser.solv_abb, analyser.rigid_atom_0, analyser.rigid_atom_1, analyser.rigid_atom_2) #new: pass all 3 rigid_atoms to account for case 1.
     #analyser.perform_solute_write_out() #DEPRECATED LM20231124. #new: instead of direct calling write_solute_pdb.py
     analyser.perform_gist_analysis()
     analyser.perform_febiss_analysis()

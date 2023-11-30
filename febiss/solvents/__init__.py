@@ -39,6 +39,7 @@ These solvents are taken from PyConSolv (https://github.com/PodewitzLab/PyConSol
 FILE_DICT = {}
 for solvent in SOLVENT_LIST:
     FILE_DICT[solvent[-4:-1]] = "{0}.mol2".format(solvent[-4:-1])
+FILE_DICT["TP3"] = "TP3.xyz"
 
 NAME_DICT = {
     "ACN": "Acetonitrile",
@@ -57,7 +58,8 @@ NAME_DICT = {
     # "OCT":"n-Octane",
     "PYR": "Pyridine",
     "THF": "Tetrahydrofurane",
-    "TOL": "Toluene"
+    "TOL": "Toluene",
+    "TP3" : "TIP3P Water"
 }
 
 RIGID_ATOMS_DICT = {
@@ -77,5 +79,6 @@ RIGID_ATOMS_DICT = {
     # "OCT":(?),
     "PYR": (2, 1, 9),  # C-N-C
     "THF": (4, 9, 6),  # C-O-C
-    "TOL": (6, 7, 9)  # C-C-C (all ring)
+    "TOL": (6, 7, 9),  # C-C-C (all ring)
+    "TP3": (2, 1, 3)   # H-O-H
     }
