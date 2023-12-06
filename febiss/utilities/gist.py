@@ -81,10 +81,10 @@ class GistAnalyser:
 
         self.__dict__.update((k, v) for k, v in kwargs.items() if k in self.allowed_keys)
 
-        if case == 1 and com:
-            self.__dict__['rigid_atom_0'] = 'COM'
+        #if case == 1 and com:
+        #    self.__dict__['rigid_atom_0'] = 'COM'
 
-        if case in [2, 3] and com:
+        if com: #LM20231206: No distinguish between cases.
             self.__dict__['rigid_atom_0'] = -1
 
     def perform_solute_write_out(self): #DEPRECATED LM20231124. Solute.pdb is now created after the gist analysis. The commands for cpptraj are now part of the gist.in file.
@@ -150,9 +150,9 @@ class GistAnalyser:
         self.solv_file = CASE_DICT[case] #stores the name of the solvent file
         self.solv_abb = None #stores the abbreviation of the solvent molecule
         #self.solv_size = 3
-        self.rigid_atom_0 = 'O' #TODO: Change to 1 as default? LM20231128
-        self.rigid_atom_1 = 'H' #TODO: Change to 2 as default? LM20231128
-        self.rigid_atom_2 = 'H' #TODO: Change to 3 as default? LM20231128
+        self.rigid_atom_0 = 1 #TODO: Change to 1 as default? LM20231128. Done 20231206
+        self.rigid_atom_1 = 2 #TODO: Change to 2 as default? LM20231128. Done 20231206
+        self.rigid_atom_2 = 3 #TODO: Change to 3 as default? LM20231128. Done 20231206
         #changed back to 3 rigid atoms since the user shall be able to choose whether COM is used or not LM20231116 #only two rigid atoms since COM will be used
         self.frame_selection = None
         self.grid_center = None
@@ -196,10 +196,10 @@ class GistAnalyser:
         self._find_febiss_info()
         with open(self.febiss_cpptraj_command_file, 'w') as f:
             f.write('readdata gist-population.dx\n')
-            f.write('readdata gist-dTSorient-dens.dx\n')
-            f.write('readdata gist-dTStrans-dens.dx\n')
-            f.write('readdata gist-Esw-dens.dx\n')
-            f.write('readdata gist-Eww-dens.dx\n')
+            f.write('readdata gist-dTSorient_norm.dx\n')
+            f.write('readdata gist-dTStrans_norm.dx\n')
+            f.write('readdata gist-Esw_norm.dx\n')
+            f.write('readdata gist-Eww_norm.dx\n')
             f.write('febiss refdens '+ str(self.refdens) + #'occurrence' + str(self.occurrence) +
                     ' solvnum ' + str(self.nsolvent) + ' nframes ' + str(self.nframes) + '\n')
             f.write('run')
@@ -235,7 +235,8 @@ class GistAnalyser:
                     + str(self.rigid_atom_1)  + ' '
                     + str(self.rigid_atom_2) + ' ') #LM20231116: changed back to 3 rigid atoms since the user shall be able to decide whether to use COM or a central atom #only 2 rigid atoms will be used
             f.write('out ' + self.gist_out_file + ' ')
-            f.write('quat\n')
+            f.write('quat ')
+            f.write('norm\n')
             #f.write('dx\n')
             #f.write('febiss ' + str(self.temp) + '\n')  # enables febiss placement in cpptraj
             f.write('run\n')

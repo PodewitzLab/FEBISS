@@ -44,7 +44,10 @@ def read_data(febiss_file, solute: Solute, solvent: Solvent): #TODO: pass solute
     with open(febiss_file,'r') as f: #assumed format: no header, no footer, data: voxel, x, y, z, energy
         data = f.readlines()
         for line in data:
-            solvent.data.append(tuple(line.split()))
+            line_entries = line.split()
+            line_entries = [float(entry) for entry in line_entries]
+            line_entries[-1] = -line_entries[-1]
+            solvent.data.append(tuple(line_entries))
     solvent.sort_by_energy() #TODO: catch case where several solvents occupy the same voxel which should not be the case
     solvent.get_coord_set()
     solvent.get_energy()

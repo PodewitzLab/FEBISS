@@ -31,7 +31,7 @@ class Solute:
     def get_coord_set(self):
         coord_list = []
         for atom in self.data:
-            coord_list.append((float(atom[-5]),float(atom[-4]),float(atom[-3]))) #TODO: Prone to ValueError LM20231127
+            coord_list.append((float(atom[-6]),float(atom[-5]),float(atom[-4]))) #TODO: Prone to ValueError LM20231127
         self.coords = np.asarray(coord_list)
 
     def get_elements(self): #TODO: merge with get_coord_set since the loop is the same
@@ -247,7 +247,10 @@ class Solvent: #in original Febiss: class Water
         self.elem_coords = []
 
     def sort_by_energy(self): #renamed from sort_by_value. LM20231123
-        self.data = sorted(self.data, key=lambda tpl: tpl[-1])
+        self.data = sorted(self.data, key=lambda tpl: tpl[-1],reverse=True)
+        with open('sorted_data.dat','w') as f:
+            for i in self.data:
+                f.write("{0} {1} {2} {3} {4}\n".format(i[0], i[1], i[2], i[3], i[4]))
 
     def get_coord_set(self): #new LM20231123:
         coord_list = []
