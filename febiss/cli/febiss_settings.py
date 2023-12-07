@@ -9,7 +9,7 @@ See LICENSE for details
 import sys
 import os
 from ..utilities.io_handling import Input
-from ..solvents import CASE_DICT, SOLVENT_LIST, FILE_DICT, RIGID_ATOMS_DICT
+from ..solvents import CASE_DICT, SOLVENT_LIST, FILE_DICT, RIGID_ATOMS_DICT, REF_DENS_DICT
 
 def help_message():
     print("\nThis program writes all possible settings of the GIST analysis "
@@ -97,7 +97,7 @@ def main():
                                                'solv_abb': solv_abb,
                                                'solv_file': CASE_DICT[3],
                                                #'solv_size':'SOLV_SIZE',
-                                               'refdens': 'REFDENS',
+                                               'refdens': REF_DENS_DICT[solv_abb],
                                                #'char_angle':'CHAR_ANGLE',
                                                'rigid_atom_0' : RIGID_ATOMS_DICT[solv_abb][1], #LM20231116: changed the number back again from 0 to 1 since one shall be able to choose if COM or central atom shall be used #changed number in bracket from 1 to 0 since the COM and not a central atom will be used for the characteristic quat calculation
                                                'rigid_atom_1': RIGID_ATOMS_DICT[solv_abb][0], #LM20231116: changed the number back again from 1 to 0 since one shall be able to choose if COM or central atom shall be used #changed number in bracket from 0 to 1 since the COM and not a central atom will be used for the characteristic quat calculation
@@ -132,7 +132,7 @@ def main():
                 f.write('  ' + str(key) + ": " + str(analyser.__dict__[key]) + '\n') # no check required since -1 is a necessary value when using com then
             elif case == 3 and com and key == 'rigid_atom_0':
                 f.write('  ' + str(key) + ": " + str(analyser.__dict__[key]) + '\n') # no check required since -1 is a necessary value when using com then
-            elif case in [1, 3] and key in ['solv_abb','solv_file','rigid_atom_1','rigid_atom_2']: # if pyconsolv solvents are
+            elif case in [1, 3] and key in ['solv_abb','solv_file','rigid_atom_1','rigid_atom_2','refdens']: # if pyconsolv solvents are
                 # used, solv_abb is typically the 3 letter abbreviation given as input. it has to be checked nonetheless
                 # just like the file path and the rigid_atom indices. LM20231114
                 #new: LM20231128 also case 1 now needs a reference file. Path to TP3.xyz is given.

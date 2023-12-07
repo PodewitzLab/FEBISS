@@ -62,23 +62,46 @@ NAME_DICT = {
     "TP3" : "TIP3P Water"
 }
 
-RIGID_ATOMS_DICT = {
-    "ACN": (4, 2, 1),  # H1-C-C
-    "ACT": (10, 2, 1),  # O-C-C
-    "BNZ": (1, 2, 3),  # C-C-C
+RIGID_ATOMS_DICT = { #LM20231207: added -1 on every index since the first atom has an index of 0
+    "ACN": (3, 1, 0),  # H1-C-C
+    "ACT": (9, 1, 0),  # O-C-C
+    "BNZ": (0, 1, 2),  # C-C-C
     # "CHX":(?),
-    "CL3": (2, 1, 3),  # Cl-C-H
-    "CL4": (2, 1, 3),  # Cl-C-Cl
-    "DCM": (2, 1, 3),  # Cl-C-H
+    "CL3": (1, 0, 2),  # Cl-C-H
+    "CL4": (1, 0, 2),  # Cl-C-Cl
+    "DCM": (1, 0, 2),  # Cl-C-H
     # "DMF":(?),
-    "DMS": (10, 1, 2),  # O-S-C
-    "ETL": (1, 2, 8),  # C-C-O
+    "DMS": (9, 0, 1),  # O-S-C
+    "ETL": (0, 1, 7),  # C-C-O
     # "HEX":(),
-    "MTL": (2, 5, 6),  # C-O-H
-    "NH3": (2, 1, 3),  # H-N-H
+    "MTL": (1, 4, 5),  # C-O-H
+    "NH3": (1, 0, 2),  # H-N-H
     # "OCT":(?),
-    "PYR": (2, 1, 9),  # C-N-C
-    "THF": (4, 9, 6),  # C-O-C
-    "TOL": (6, 7, 9),  # C-C-C (all ring)
-    "TP3": (2, 1, 3)   # H-O-H
+    "PYR": (1, 0, 8),  # C-N-C
+    "THF": (3, 8, 5),  # C-O-C
+    "TOL": (5, 6, 8),  # C-C-C (all ring)
+    "TP3": (1, 0, 2)   # H-O-H
     }
+
+REF_DENS_DICT = {
+    #densities (at temperatures 20/25 °C) obtained from CRC Handbook of Chemistry and Physics, 97th ed.;
+    # Haynes, W. M., Lide, D. R., Bruno, T. J., Eds.; CRC Press, Taylor & Francis Group: Boca Raton, FL, 2017.
+    # https://doi.org/10.1201/9781315380476. p. 15-13 ff.,
+    # NH3: NIST database at 1.013 bar and 25 C
+    # TP3: CPPTRAJ manual (December 16, 2022), p. 123
+    "ACN" : 0.0115,
+    "ACT" : 0.0082,
+    "BNZ" : 0.0068,
+    "CL3" : 0.0075,
+    "CL4" : 0.0062,
+    "DCM" : 0.0094,
+    "DMS" : 0.0085,
+    "ETL" : 0.0103,
+    "MTL" : 0.0149,
+    "NH3" : 0.000025,
+    "PYR" : 0.0075,
+    "THF" : 0.0074,
+    "TOL" : 0.0057,
+    "TP3" : 0.0334,
+}
+

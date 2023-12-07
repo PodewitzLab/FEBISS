@@ -248,11 +248,6 @@ class Plot:
             xstep = 1
 
         # set tics and limits
-        print("xmax = {0}".format(xmax))
-        print("xstep = {0}".format(xstep))
-        print("ymin = {0}".format(ymin))
-        print("ymax = {0}".format(ymax))
-        print("ystep = {0}".format(ystep))
         plt.xticks(np.arange(0, xmax + xstep, step=xstep))
         if ymin == ymax == 0.0: #TODO: Change to try-except to catch if ymax == ymin. LM20231127
             ymax = 1
@@ -388,7 +383,7 @@ class Plot:
             voxel = int(solvent.data[select][0]) #new LM20231123. LM20231130: type conversion from str to int. TODO: Type conversion prone to ValueError
             quats = solvent.quats[voxel] #new LM20231123
             com = (float(solvent.data[select][1]), float(solvent.data[select][2]), float(solvent.data[select][3])) #new LM20231123. LM20231130: conversion from str to int. TODO: Prone to ValueError.
-            elements, coords = reference._find_avg_solvent(voxel, quats, com, verbose=True) #new LM20231123. This finally determines the solvent to be placed.
+            elements, coords = reference._find_avg_solvent(voxel, quats, com, verbose=False) #new LM20231123. This finally determines the solvent to be placed.
             values = float(solvent.data[select][-1]) #new LM20231124. #LM20231130 conversion from str to float
             selected_solvent.elements.extend(elements) #changed from append which does not work since elements is a list itself. LM20231130
             selected_solvent.coords.extend(coords) #changed from select * 3 in brackets LM20231123. #changed from append which does not work since elements is a list itself. LM20231130

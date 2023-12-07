@@ -160,7 +160,7 @@ class GistAnalyser:
         self.grid_spacing = 0.5
         self.grid_lengths = (60, 60, 60)
         if self.case in [1, 2]:
-            self.refdens = 0.0329  # tip3p
+            self.refdens = 0.0334 #LM20231207: changed from 0.0329 # tip3p
             #self.char_angle not needed anymore since tip3p water is given as xyz file. LM20231128
             #self.char_angle = 104.52  # tip3p #changed from 104.57 according to Jorgensen et al., The Journal of Chemical Physics 1983, 79 (2), 926–935. https://doi.org/10.1063/1.445869. LM20231128
         else:

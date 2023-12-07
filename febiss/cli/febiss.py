@@ -51,8 +51,8 @@ def read_data(febiss_file, solute: Solute, solvent: Solvent): #TODO: pass solute
     solvent.sort_by_energy() #TODO: catch case where several solvents occupy the same voxel which should not be the case
     solvent.get_coord_set()
     solvent.get_energy()
-    print("\nSolvent coords: \n")
-    print(solvent.coords)
+    #print("\nSolvent coords: \n")
+    #print(solvent.coords)
 
     #read solute.pdb
     with open('solute.pdb','r') as f: #assumed format of ATOM line: ATOM, ordinal number, label, residue, number, x, y, z, 1.00, energy, element
@@ -64,10 +64,10 @@ def read_data(febiss_file, solute: Solute, solvent: Solvent): #TODO: pass solute
                 solute.data.append(line.split())
     solute.get_coord_set()
     solute.get_elements()
-    print("\nSolute coords: \n")
-    print(solute.coords)
-    print("\nSolute elements: \n")
-    print(solute.elements)
+    #print("\nSolute coords: \n")
+    #print(solute.coords)
+    #print("\nSolute elements: \n")
+    #print(solute.elements)
 
     #solute.atoms = np.asarray(solute.atoms) #not needed right now, LM20231123
     #solute.determine_polar_hydrogen_and_non_hydrogen() #not needed right now, LM20231123

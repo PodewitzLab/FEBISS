@@ -48,8 +48,8 @@ def write_pdb(pdb: str, structure: Union[Solute, Solvent], abb, solute: bool = F
     else:
         atomcounter = len(open(pdb, 'r').readlines()) + 1
         f = open(pdb, 'a')
-        print(structure.elements)
-        print(structure.coords)
+        #print(structure.elements)
+        #print(structure.coords)
     for count, (ele, atom) in enumerate(zip(structure.elements, structure.coords)): #changed from structure.atoms LM20231130
         j = []
         if solute:
@@ -74,7 +74,7 @@ def write_pdb(pdb: str, structure: Union[Solute, Solvent], abb, solute: bool = F
         if solute: #new LM20231130: introduced since solute does not have an attribute "values" anymore
             value = 0.0
         else:
-            print(structure.values[count])
+            #print(structure.values[count])
             value = float(structure.values[count])
         if value == 0.0:
             j.append(str('%7.2f' % value).ljust(7))  # delta G

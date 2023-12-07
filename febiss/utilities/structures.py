@@ -191,7 +191,6 @@ class Reference:
         """
         #step 1)
         key_list = list(self.eq_dict.keys())
-        print(key_list)
         for i in range(len(quats)):
             distance_list = []
             for j in range(len(key_list)):
