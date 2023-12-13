@@ -23,7 +23,7 @@ def help_message():
     print('If you already have the sufficient software, you can skip this setup and write the path in \n'
           + SETTINGS_FILE + ' yourself like so:')
     print("CPPTRAJ_BIN: '/path/to/the/cpptraj/binary'\n")
-    print('If you want to install GIGIST with this program, you can give a yaml file\n'
+    print('If you want to install the needed CPPTRAJ version with this program, you can give a yaml file\n'
           'with the wanted installation path and CPPTRAJ specifications.')
     print('An example with all possible settings:\n')
     print(yaml.dump(default))
@@ -54,24 +54,21 @@ def main():
     if not os.path.exists(inst_path):
         os.mkdir(inst_path)
     os.chdir(inst_path)
-    subprocess.call(['git', 'clone', 'https://github.com/liedllab/gigist.git'])
-    #subprocess.call(['git', 'clone', '--single-branch', '--branch', 'febiss_water_angle_option',
-    #                 'https://github.com/steinmig/gigist.git'])
-    subprocess.call(['git', 'clone', 'https://github.com/Amber-MD/cpptraj.git'])
+    subprocess.call(['git', 'clone', 'https://github.com/maberl1/cpptraj.git'])
     # change CPPTRAJ to working version
     os.chdir('cpptraj')
     # temporary this working commit due to necessary refactoring in GIGIST, which is not finished yet
     subprocess.call(['git', 'checkout', '3de93cd'])
-    # save directories for rc file
-    basic_settings = {'GIGIST_HOME': os.path.join(inst_path, 'gigist'),
-                      'CPPTRAJ_HOME': os.path.join(inst_path, 'cpptraj')}
-    os.chdir(basic_settings['GIGIST_HOME'])
-    # make patch.sh executable for user
-    st = os.stat('patch.sh')
-    os.chmod('patch.sh', st.st_mode | stat.S_IEXEC)
-    # move gigist files to cpptraj
-    subprocess.call(['./patch.sh', basic_settings['CPPTRAJ_HOME']])
-    os.chdir(basic_settings['CPPTRAJ_HOME'])
+    # # save directories for rc file
+    basic_settings = {#'GIGIST_HOME': os.path.join(inst_path, 'gigist'),
+                    'CPPTRAJ_HOME': os.path.join(inst_path, 'cpptraj')}
+    # os.chdir(basic_settings['GIGIST_HOME'])
+    # # make patch.sh executable for user
+    # st = os.stat('patch.sh')
+    # os.chmod('patch.sh', st.st_mode | stat.S_IEXEC)
+    # # move gigist files to cpptraj
+    # subprocess.call(['./patch.sh', basic_settings['CPPTRAJ_HOME']])
+    os.chdir(os.path.join(inst_path, 'cpptraj'))
     # build command for configure of cpptraj and binary name based on given yaml
     configure = ['./configure']
     bin_string = 'cpptraj'
