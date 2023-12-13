@@ -10,7 +10,6 @@ from warnings import warn
 import glob
 import os
 import subprocess
-import sys
 from .io_handling import Input
 from ..utilities.write_solute_pdb import write_solute_pdb
 from ..solvents import CASE_DICT
@@ -150,9 +149,9 @@ class GistAnalyser:
         self.solv_file = CASE_DICT[case] #stores the name of the solvent file
         self.solv_abb = None #stores the abbreviation of the solvent molecule
         #self.solv_size = 3
-        self.rigid_atom_0 = 1 #TODO: Change to 1 as default? LM20231128. Done 20231206
-        self.rigid_atom_1 = 2 #TODO: Change to 2 as default? LM20231128. Done 20231206
-        self.rigid_atom_2 = 3 #TODO: Change to 3 as default? LM20231128. Done 20231206
+        self.rigid_atom_0 = 0 #Changed to 0 as default. LM20231212.
+        self.rigid_atom_1 = 1 #Changed to 1 as default. LM20231212.
+        self.rigid_atom_2 = 2 #Changed to 2 as default. LM20231212.
         #changed back to 3 rigid atoms since the user shall be able to choose whether COM is used or not LM20231116 #only two rigid atoms since COM will be used
         self.frame_selection = None
         self.grid_center = None
