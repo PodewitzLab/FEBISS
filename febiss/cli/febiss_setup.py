@@ -58,7 +58,7 @@ def main():
     # change CPPTRAJ to working version
     os.chdir('cpptraj')
     # temporary this working commit due to necessary refactoring in GIGIST, which is not finished yet
-    subprocess.call(['git', 'checkout', '3de93cd'])
+    # subprocess.call(['git', 'checkout', '3de93cd'])
     # # save directories for rc file
     basic_settings = {#'GIGIST_HOME': os.path.join(inst_path, 'gigist'),
                     'CPPTRAJ_HOME': os.path.join(inst_path, 'cpptraj')}
