@@ -70,7 +70,7 @@ def main():
     # subprocess.call(['./patch.sh', basic_settings['CPPTRAJ_HOME']])
     os.chdir(os.path.join(inst_path, 'cpptraj'))
     # build command for configure of cpptraj and binary name based on given yaml
-    configure = ['./configure']
+    configure = ['yes | bash ./configure']
     bin_string = 'cpptraj'
     # dict.get returns None if not present, otherwise value
     if param.get('openmp'):
@@ -81,7 +81,7 @@ def main():
         bin_string += '.cuda'
     configure.append("gnu")
     # install cpptraj
-    subprocess.call(configure)
+    subprocess.run(configure, shell=True)
     try:
         n_cores = os.environ['OMP_NUM_THREADS']
         subprocess.call(['make', '-j', str(n_cores)])
