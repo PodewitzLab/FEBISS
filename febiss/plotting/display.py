@@ -255,10 +255,7 @@ class Plot:
         plt.yticks(np.arange(ymin, ymax + ystep, step=ystep))
         ax.set_ylim([ymin, ymax])
         ax.set_xlim([xmin, xmax])
-        for tick in ax.xaxis.get_major_ticks():
-            tick.label.set_fontsize(self.fontsize)
-        for tick in ax.yaxis.get_major_ticks():
-            tick.label.set_fontsize(self.fontsize)
+        ax.tick_params(axis='both', which='major', labelsize=self.fontsize)  # https://stackoverflow.com/questions/6390393/how-to-change-tick-label-font-size/11386056#11386056 (accessed 14 December 2023)
 
         # creates legend according with or without green bar
         self._create_legend(ax, save_selected)
