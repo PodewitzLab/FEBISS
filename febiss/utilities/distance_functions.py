@@ -6,5 +6,10 @@ Copyright University Innsbruck, Institute for General, Inorganic, and Theoretica
 See LICENSE for details
 """
 
+import numpy as np
+
 def distance_squared(a_array, b_array) -> float:
 	return sum(((a-b)**2 for a, b in zip(a_array, b_array)))
+
+def distance_between_quaternions(q1 : np.ndarray, q2 : np.ndarray): #maybe use quaternion python package
+	NotImplementedError()
