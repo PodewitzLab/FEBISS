@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 __copyright__ = """
 This code is licensed under the MIT license.
-Copyright University Innsbruck, Institute for General, Inorganic, and Theoretical Chemistry, Podewitz Group
+Copyright Technische Universität Wien, Institute of Materials Chemistry, Podewitz Group
 See LICENSE for details
 """
 
@@ -35,11 +35,11 @@ with open(path.join(here, 'requirements.txt')) as requirements_file:
                     if not line.startswith('#')]
 setup(
     name="Febiss",
-    version="0.9.0",
+    version="1.9.0",
     description="Tool to ease GIST analysis and display and select FEBISS waters",
     long_description=readme,
-    author="Miguel Steiner",
-    author_email="steiner.mig@gmail.com",
+    author="Miguel Steiner, Lukas Magenheim",
+    author_email="steiner.mig@gmail.com, l.magenheim@protonmail.com",
     python_requires='>={}'.format('.'.join(str(n) for n in min_version)),
     install_requires=requirements,
     zip_safe=False,
@@ -78,4 +78,3 @@ setup(
         ],
     },
 )
-
