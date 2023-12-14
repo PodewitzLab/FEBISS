@@ -81,7 +81,7 @@ def main():
         bin_string += '.cuda'
     configure.append("gnu")
     # install cpptraj
-    subprocess.run(configure, shell=True)
+    subprocess.run(" ".join(configure), shell=True)
     try:
         n_cores = os.environ['OMP_NUM_THREADS']
         subprocess.call(['make', '-j', str(n_cores)])
