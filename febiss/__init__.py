@@ -27,7 +27,7 @@ def _load_febiss_settings() -> Dict[str, str]:
         # if present.
         d = {}
         for k, v in os.environ.items():
-            if k in ['CPPTRAJ_BIN', 'CPPTRAJ_HOME, ''GIGIST_HOME', 'FEBISS_HOME']:
+            if k in ['CPPTRAJ_BIN', 'CPPTRAJ_HOME', 'FEBISS_HOME']: #deleted GIGIST_HOME LM20231214
                 d[k] = v
     return dict(d)
 

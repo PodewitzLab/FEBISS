@@ -18,7 +18,6 @@ default = {'installation_path': '~/.dependencies_febiss', 'openmp': True, 'cuda'
 
 
 def help_message():
-    #print('\nFEBISS requires the GIGIST implementation for CPPTRAJ by the Liedlgroup.')
     print('This setup program installs this dependency for you and sets the global variables.')
     print('If you already have the sufficient software, you can skip this setup and write the path in \n'
           + SETTINGS_FILE + ' yourself like so:')
@@ -57,20 +56,11 @@ def main():
     subprocess.call(['git', 'clone', 'https://github.com/maberl1/cpptraj.git'])
     # change CPPTRAJ to working version
     os.chdir('cpptraj')
-    # temporary this working commit due to necessary refactoring in GIGIST, which is not finished yet
-    # subprocess.call(['git', 'checkout', '3de93cd'])
     # # save directories for rc file
-    basic_settings = {#'GIGIST_HOME': os.path.join(inst_path, 'gigist'),
-                    'CPPTRAJ_HOME': os.path.join(inst_path, 'cpptraj')}
-    # os.chdir(basic_settings['GIGIST_HOME'])
-    # # make patch.sh executable for user
-    # st = os.stat('patch.sh')
-    # os.chmod('patch.sh', st.st_mode | stat.S_IEXEC)
-    # # move gigist files to cpptraj
-    # subprocess.call(['./patch.sh', basic_settings['CPPTRAJ_HOME']])
+    cpptraj_home = os.path.join(inst_path, 'cpptraj')
     os.chdir(os.path.join(inst_path, 'cpptraj'))
     # build command for configure of cpptraj and binary name based on given yaml
-    configure = ['yes | bash ./configure']
+    configure = ['yes | bash ./configure'] #yes command downloads and installs fftw3. LM&RT20231214.
     bin_string = 'cpptraj'
     # dict.get returns None if not present, otherwise value
     if param.get('openmp'):
@@ -81,16 +71,16 @@ def main():
         bin_string += '.cuda'
     configure.append("gnu")
     # install cpptraj
-    subprocess.run(" ".join(configure), shell=True)
+    subprocess.run(" ".join(configure), shell=True) #changed from subprocess.call. LM&RT20231214
     try:
         n_cores = os.environ['OMP_NUM_THREADS']
         subprocess.call(['make', '-j', str(n_cores)])
     except KeyError:
         subprocess.call(['make'])
-    basic_settings['CPPTRAJ_BIN'] = os.path.join(basic_settings['CPPTRAJ_HOME'], 'bin', bin_string)
-    if not os.path.exists(basic_settings['CPPTRAJ_BIN']):
+    cpptraj_home = {'CPPTRAJ_BIN':os.path.join(cpptraj_home, 'bin', bin_string)}
+    if not os.path.exists(cpptraj_home['CPPTRAJ_BIN']):
         raise FileNotFoundError('ERROR, the binary ' + bin_string + ' does not exist, check ' +
-                                basic_settings['CPPTRAJ_HOME'] + ' or output above for possible reasons')
+                                cpptraj_home['CPPTRAJ_BIN'] + ' or output above for possible reasons')
     # save settings in rc file in home
     if os.path.exists(SETTINGS_FILE):
         print('WARNING: Overwriting existing rc file.')
@@ -105,7 +95,7 @@ def main():
             else:
                 print("Sorry wrong input, just 'y' or 'n'.")
     with open(SETTINGS_FILE, 'w') as outfile:
-        yaml.dump(basic_settings, outfile, default_flow_style=False, allow_unicode=True)
+        yaml.dump(cpptraj_home, outfile, default_flow_style=False, allow_unicode=True)
     # move back to previous working directory
     os.chdir(cwd)
     print('\nInstallation successful, these are the saved settings:')
