@@ -12,7 +12,7 @@ from utilities.averageQuaternions import averageQuaternions as avg
 from typing import Union
 
 
-def setup(ori_path, return_path, write_out=False) -> (dict[quat.quaternion], Molecule):
+def setup(ori_path, return_path, write_out=False, load=False, i1 = 3, i2 = 4) -> (dict[quat.quaternion], Molecule):
     """
     Takes a molecular xyz-file (ori_path) centers it (puts COM at origin) and analyzes the symmetry elements using the
     pymatgen.symmetry package. Only the rotation matrices are then converted into quaternions which are stored in
@@ -22,7 +22,10 @@ def setup(ori_path, return_path, write_out=False) -> (dict[quat.quaternion], Mol
     :param ori_path: Path to reference xyz-file.
     :param return_path: Used only if write_out == True. Path of created file
     :param write_out: Default: False. If true, equivalent structures will be written out to return_path.
-    :return: quat_dict, cref
+    :param load: Default: False. If true, the written out molecules get read in again as separate Molecule objects.
+    :param i1: Index of first rigid atom.
+    :param i2: Index of second rigid atom.
+    :return: quat_dict, cref, eq_struc_dict, char_quat_dict
     """
 
     ref = Molecule.from_file(ori_path)
@@ -32,6 +35,8 @@ def setup(ori_path, return_path, write_out=False) -> (dict[quat.quaternion], Mol
 
     num = 1
     quat_dict = {}
+    eq_struc_dict = {}
+    char_quat_dict = {}
     for symm in symmops_list:  # filtering adopted from analyzer.get_rotational_symmetry_number() (line 1284)
         coord_list = []
         rot = symm.rotation_matrix
@@ -40,10 +45,16 @@ def setup(ori_path, return_path, write_out=False) -> (dict[quat.quaternion], Mol
             for j in range(len(ref.cart_coords)):
                 coord_list.append(symm.apply_rotation_only(ref.cart_coords[j]))
             if write_out == True:
-                write(ori_path, return_path, coord_list, idx=num)
+                written_path = write(ori_path, return_path, coord_list, idx=num)
+
+                if load:
+                    eq_struc_dict[num] = Molecule.from_file(written_path)
+                    char_quat_dict[num] = create_gist_quat(eq_struc_dict[num],i1,i2)
+
             num += 1
 
-    return quat_dict, cref
+
+    return quat_dict, cref, eq_struc_dict, char_quat_dict
 
 def inv(q:quaternion.quaternion):
     """
@@ -339,6 +350,44 @@ def distance_test(ori_path,ref_path_list: Union[list[str],str],i1 = 3, i2 = 4):
         q_ref = create_gist_quat(ref, i1, i2)
         print("q_ref: {0}".format(q_ref))
         print("theta: {0}".format(distance(q_ori, q_ref)))
+
+
+"""
+This is a test of the actual clean up done in FEBISS. A random test orientation of a solvent gets compared to the 
+characteristic quaternions of the equivalent structures. This is done by measuring the quaternion distance to each
+equivalent structure. Two cases can then apply:
+1) The test structure is closest to the original structure -> nothing happens
+2) The test structure is closest to an equivalent structure -> the test structure gets rotated by the same rotation that
+is needed to convert the equivalent structure to the original structure, i.e. the inverse of the rotation quaternion
+needed to rotate the original structure to the equivalent structure.
+"""
+
+def clean_up_test(ori_path,test_path,refdir_path, i1 = 3, i2 = 4, abb = 'ACN'):
+    ori = Molecule.from_file(ori_path)
+    ori_char_q = create_gist_quat(ori,i1,i2)
+    test = Molecule.from_file(test_path)
+    test_char_q = create_gist_quat(test,i1,i2)
+    path_template = refdir_path + "/{0}".format(abb) + "_{0}.xyz"  # last placeholder is for enumeration of files used in write()
+    stp = setup(ori_path,path_template,write_out=True,load=True, i1=i1, i2=i2)
+    key_list = list(stp[3].keys())
+    distance_list = []
+
+    for j in range(len(key_list)):
+        distance_list.append(distance(test_char_q, stp[3][j+1]))
+    print("rotation quaternions: {0}".format(stp[0]))
+    print("distance_list before: {0}".format(distance_list))
+
+    min_idx = distance_list.index(min(distance_list))
+    print("min_idx = {0}".format(min_idx))
+
+    print("test_char_q before: {0}".format(test_char_q))
+    test_char_q = test_char_q * inv(ori_char_q) * inv(stp[0][min_idx+1]) * ori_char_q
+    print("test_char_q after: {0}".format(test_char_q))
+
+    distance_list = []
+    for j in range(len(key_list)):
+        distance_list.append(distance(test_char_q, stp[3][j + 1]))
+    print("distance_list after: {0}".format(distance_list))
 
 
 def average_test(ori_path,theta:float,i1=3,i2=4, return_path = None):

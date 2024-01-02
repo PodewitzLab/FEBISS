@@ -206,7 +206,7 @@ class Reference:
                 print("min_idx: {0}".format(min_idx))
                 print("quats[{1}] before clean-up: {0}".format(quats[i],i))
 
-            quats[i] = quats[i] * inv(self.char_q) * self.eq_dict[min_idx][0] * self.char_q
+            quats[i] = quats[i] * inv(self.char_q) * inv(self.eq_dict[key_list[min_idx]][0]) * self.char_q #LM20231222: Inverse since we're not interested in the rotation from the origin to the equivalent representation but the other way round.
 
             if verbose:
                 print("quats[{1}] after clean-up: {0}".format(quats[i],i))
