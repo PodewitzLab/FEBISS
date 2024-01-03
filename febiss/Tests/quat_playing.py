@@ -181,6 +181,25 @@ an implementation based on the power method to find the principal eigenvector wi
 #     eigenVectors = eigenVectors[:,eigenValues.argsort()[::-1]]
 #     print(np.real(eigenVectors[:,0]))
 
+def create_uniformly_rotated_molecules(ori_path, return_path, theta:float, nrot:int):
+    """
+    Creates an nrot number of rotated molecules that are created by rotating given input coordinates (ori_path)
+    by an angle theta. The rotated molecules are then written into return_path.
+
+    :param ori_path: Path of the original file.
+    :param return_path: Path were the xyz-files of the rotated molecules are written into.
+    :param theta: The angle in radians.
+    :param nrot: The number of molecules to be created by rotating.
+    :return: List of names of the created xyz-files.
+    """
+    file_list = []
+    ori = Molecule.from_file(ori_path)
+    for i in range(nrot):
+        ori.rotate_sites(theta=theta)
+        file_list.append(write(ori_path,return_path,ori.cart_coords,i))
+    return file_list
+
+
 def create_Q_matrix(list_of_q:list[quaternion.quaternion]):
     """
     Creates the Q matrix that is needed for averageQuaternion.py.
@@ -351,45 +370,6 @@ def distance_test(ori_path,ref_path_list: Union[list[str],str],i1 = 3, i2 = 4):
         print("q_ref: {0}".format(q_ref))
         print("theta: {0}".format(distance(q_ori, q_ref)))
 
-
-"""
-This is a test of the actual clean up done in FEBISS. A random test orientation of a solvent gets compared to the 
-characteristic quaternions of the equivalent structures. This is done by measuring the quaternion distance to each
-equivalent structure. Two cases can then apply:
-1) The test structure is closest to the original structure -> nothing happens
-2) The test structure is closest to an equivalent structure -> the test structure gets rotated by the same rotation that
-is needed to convert the equivalent structure to the original structure, i.e. the inverse of the rotation quaternion
-needed to rotate the original structure to the equivalent structure.
-"""
-
-def clean_up_test(ori_path,test_path,refdir_path, i1 = 3, i2 = 4, abb = 'ACN'):
-    ori = Molecule.from_file(ori_path)
-    ori_char_q = create_gist_quat(ori,i1,i2)
-    test = Molecule.from_file(test_path)
-    test_char_q = create_gist_quat(test,i1,i2)
-    path_template = refdir_path + "/{0}".format(abb) + "_{0}.xyz"  # last placeholder is for enumeration of files used in write()
-    stp = setup(ori_path,path_template,write_out=True,load=True, i1=i1, i2=i2)
-    key_list = list(stp[3].keys())
-    distance_list = []
-
-    for j in range(len(key_list)):
-        distance_list.append(distance(test_char_q, stp[3][j+1]))
-    print("rotation quaternions: {0}".format(stp[0]))
-    print("distance_list before: {0}".format(distance_list))
-
-    min_idx = distance_list.index(min(distance_list))
-    print("min_idx = {0}".format(min_idx))
-
-    print("test_char_q before: {0}".format(test_char_q))
-    test_char_q = test_char_q * inv(ori_char_q) * inv(stp[0][min_idx+1]) * ori_char_q
-    print("test_char_q after: {0}".format(test_char_q))
-
-    distance_list = []
-    for j in range(len(key_list)):
-        distance_list.append(distance(test_char_q, stp[3][j + 1]))
-    print("distance_list after: {0}".format(distance_list))
-
-
 def average_test(ori_path,theta:float,i1=3,i2=4, return_path = None):
     """
     Rotates a given molecule at ori_path for theta degrees around the z-axis. If a return path is given it also creates
@@ -421,3 +401,80 @@ def average_test(ori_path,theta:float,i1=3,i2=4, return_path = None):
 
     Q = create_Q_matrix([q_ori,q_1,q_2])
     print(quat.from_float_array(avg(Q)))
+
+
+"""
+This is a test of the actual clean up done in FEBISS. A random test orientation of a solvent gets compared to the 
+characteristic quaternions of the equivalent structures. This is done by measuring the quaternion distance to each
+equivalent structure. Two cases can then apply:
+1) The test structure is closest to the original structure -> nothing happens
+2) The test structure is closest to an equivalent structure -> the test structure gets rotated by the same rotation that
+is needed to convert the equivalent structure to the original structure, i.e. the inverse of the rotation quaternion
+needed to rotate the original structure to the equivalent structure.
+"""
+
+def clean_up_test(ori_path,test_paths:list[str],refdir_path, i1 = 3, i2 = 4, abb = 'ACN'):
+    ori = Molecule.from_file(ori_path)
+    ori = ori.get_centered_molecule()
+    ori_char_q = create_gist_quat(ori,i1,i2)
+    path_template = refdir_path + "/{0}".format(abb) + "_{0}.xyz"  # last placeholder is for enumeration of files used in write()
+    stp = setup(ori_path,path_template,write_out=True,load=True, i1=i1, i2=i2)
+    key_list = list(stp[3].keys())
+
+    char_q_list_before_cleanup = []
+    char_q_list_after_cleanup = []
+    for i in range(len(test_paths)):
+        test = Molecule.from_file(test_paths[i])
+        test = test.get_centered_molecule()
+        print("center of mass: {0}".format(test.center_of_mass))
+        test_char_q = create_gist_quat(test, i1, i2)
+        char_q_list_before_cleanup.append(test_char_q)
+
+        distance_list = []
+        for j in range(len(key_list)):
+            distance_list.append(distance(test_char_q, stp[3][j+1]))
+        print("rotation quaternions: {0}".format(stp[0]))
+        print("distance_list before: {0}".format(distance_list))
+
+        min_idx = distance_list.index(min(distance_list))
+        print("min_idx = {0}".format(min_idx))
+
+        print("test_char_q before: {0}".format(test_char_q))
+        test_char_q = test_char_q * inv(ori_char_q) * inv(stp[0][min_idx+1]) * ori_char_q
+        print("test_char_q after: {0}".format(test_char_q))
+
+        char_q_list_after_cleanup.append(test_char_q)
+
+        distance_list = []
+        for j in range(len(key_list)):
+            distance_list.append(distance(test_char_q, stp[3][j + 1]))
+        print("distance_list after: {0}\n".format(distance_list))
+
+    Q_before = create_Q_matrix(char_q_list_before_cleanup)
+    Q_after = create_Q_matrix(char_q_list_after_cleanup)
+
+    q_avg_before = quat.from_float_array(avg(Q_before))
+    q_avg_after = quat.from_float_array(avg(Q_after))
+
+    qt_before = q_avg_before * inv(ori_char_q)
+    qt_after = q_avg_after * inv(ori_char_q)
+
+    new_coords_before = new_coord_gen(ori, qt_before)
+    new_coords_after = new_coord_gen(ori, qt_after)
+
+    write(ori_path,refdir_path+"/avg_before.xyz",new_coords_before)
+    write(ori_path, refdir_path + "/avg_after.xyz", new_coords_after)
+
+    print("Char_qs before cleanup: {0}".format(char_q_list_before_cleanup))
+    print("Char_qs after cleanup: {0}".format(char_q_list_after_cleanup))
+
+# clean_up_test('./QuatCleanup/ORI/ACN_ORI.xyz',
+#               [
+#                   './QuatCleanup/RANDOM/ACN_46.xyz',
+#                   './QuatCleanup/RANDOM/ACN_46_rot_0_H13.xyz',
+#                   './QuatCleanup/RANDOM/ACN_46_rot_1_H13.xyz',
+#                   './QuatCleanup/RANDOM/ACN_46_rot_2_H31.xyz',
+#                   './QuatCleanup/RANDOM/ACN_46_rot_3_H31.xyz',
+#               ],
+#               './QuatCleanup/REFDIR',i1=2,i2=3)
+
