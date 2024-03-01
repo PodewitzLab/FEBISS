@@ -9,6 +9,7 @@ See LICENSE for details
 from collections import OrderedDict
 from matplotlib.ticker import FormatStrFormatter
 from matplotlib.widgets import Button
+from matplotlib.widgets import TextBox #new LM20240229
 from typing import List
 from warnings import warn
 import matplotlib
@@ -75,6 +76,7 @@ class Plot:
         self.transparent = True
         self.display_once = False
         self.testing = False
+        self.drs = [] #not in allowed keys. replaces drs used for bar interaction below #LM20240229
 
     def _determine_hetero_elements(self, solute: Solute):
         self.existing_elements = []
@@ -191,10 +193,10 @@ class Plot:
         rects = ax.bar(indices, solvent.values, color=barcolors, picker=True)  # create bars
 
         # make bars interactive
-        drs = []  # necessary for interaction
+        #drs = []  # necessary for interaction
         for rect, color in zip(rects, barcolors):
             dr = ClickableBar(rect, color, self)
-            drs.append(dr)
+            self.drs.append(dr)
 
         # font specifications
         matplotlib.rcParams.update({'font.size': self.fontsize})
@@ -273,8 +275,11 @@ class Plot:
             # specify button
             b = plt.axes([0.85, 0.9, 0.1, 0.075])  # set position
             button = Button(b, "Display RDF", color="0.85", hovercolor="0.95")  # set text and color
-            callback = ButtonActions()  # init class with necessary functions and determine click actions
-            button.on_clicked(lambda x: ButtonActions.plot_rdf(callback, self))
+            callback_b = ButtonActions()  # init class with necessary functions and determine click actions
+            button.on_clicked(lambda x: ButtonActions.plot_rdf(callback_b, self))
+            t = plt.axes([0.1, 0.1, 0.5, 0.075]) #left, bottom, width, height
+            txt_box = TextBox(t, "IDs:", "Enter solvent IDs here.")
+            txt_box.on_submit(self._input_selection)
             plt.show()
 
     def _interactive_reselection(self, solute: Solute, solvent: Solvent):
@@ -359,6 +364,51 @@ class Plot:
             else:  # solvent were selected, reselection of parameters are not necessary
                 selected = True
 
+    def _input_selection(self,text : str): #ids separated with ",". allows ranges with "-"
+        split = text.split(",")
+        rm_list = []
+        for i in range(len(split)):
+            split[i] = split[i].split("-")
+            if len(split[i]) == 1:
+                try:
+                    split[i] = int(split[i][0])
+                except ValueError:
+                    print("A non-integer was given. Please re-enter your selection!")
+                    return
+            else:
+                rm_list.append(split[i])
+                for j in range(len(split[i])):
+                    try:
+                        split[i][j] = int(split[i][j])
+                    except ValueError:
+                        print("A range containing a non-integer was given. Please re-enter your selection!")
+                        return
+                a = sorted(split[i])
+                for k in range(a[0], a[-1] + 1):
+                    split.append(k)
+
+        for r in rm_list:
+            split.remove(r)
+        self.selected_solvents = list(set(sorted(split))) #overrules all previously clicked solvents
+        print("Selected solvents: {0}".format(self.selected_solvents))
+
+        for dr in self.drs:
+            try:
+                if int(dr.rect.xy[0]) in self.selected_solvents:
+                    dr.color = self.colors['selected']
+                    canvas = dr.rect.figure.canvas
+                    axes = dr.rect.axes
+                    dr.rect.set_animated(True)
+                    canvas.draw()
+                    dr.background = canvas.copy_from_bbox(dr.rect.axes.bbox)
+                    axes.draw_artist(dr.rect)
+                    canvas.blit(axes.bbox)
+                    #TODO: Create legend with selected solvents.
+            except (ValueError,TypeError):
+                print("Something was wrong with re-coloring the bars upon input selection!")
+                return
+
+
     def _save_selection(self, abb, solute: Solute, solvent: Solvent, reference: Reference) -> str:
         print('Number of solvents chosen: ' + str(len(self.selected_solvents)))
         filename = 'solvated_structure-' + str(len(self.selected_solvents)) + '.pdb'
@@ -400,7 +450,7 @@ class Plot:
 class ClickableBar:
     lock = None  # only one can be clicked at a time
 
-    def __init__(self, rect, color, plot):
+    def __init__(self, rect : matplotlib.patches.Rectangle, color, plot):
         self.rect = rect
         self.press = None
         self.background = None
