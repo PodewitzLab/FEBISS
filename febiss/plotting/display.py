@@ -29,19 +29,23 @@ class Plot:
         self._set_defaults()
         self.allowed_keys = {'cutoff1', 'cutoff2', 'displayed_solvents', 'colors', 'width', 'height', 'dpi', 'xlabel',
                              'ylabel', 'selected_plotname', 'plotname', 'orientation', 'fontsize', 'number_xtics',
-                             'y_numbers', 'marks', 'transparent', 'display_once', 'testing', 'febiss_file', 'rdf_names'}
+                             'y_numbers', 'marks', 'transparent', 'display_once', 'testing', 'febiss_file', 'rdf_names',
+                             'solvent_selection'}
         self.__dict__.update((k, v) for k, v in kwargs.items() if k in self.allowed_keys)
         for key in kwargs.keys():
             if key not in self.allowed_keys:
                 warn('WARNING: Did not recognize key: ' + str(key))
 
     def gui(self, abb, solute: Solute, solvent: Solvent, reference: Reference) -> str:
-        if not self.testing:
+        if not self.testing and self.solvent_selection is None:
             self._determine_hetero_elements(solute)
             barcolors = self._determine_colors(solute, solvent)
             self._create_plot(barcolors, solvent, False)
+        elif not self.testing:
+            self._input_selection(self.solvent_selection)
         else:
             self.selected_solvents = [0, 1, 2, 3, 4]
+
         if self.display_once:
             sys.exit()
         # avoid bug of selecting out of range solvent
@@ -62,7 +66,7 @@ class Plot:
         self.width = 16
         self.height = 8
         self.dpi = 200
-        self.xlabel = 'Solvent molecules sorted by their Free Energy values'
+        self.xlabel = 'ID of solvent molecule (click bar or enter ID to select)' #changed LM20240301
         self.ylabel = '$-$ Free Energy / kcal mol$^{-1}$'
         self.selected_plotname = 'febiss-plot-selected.png'
         self.plotname = 'febiss-plot.png'
@@ -76,6 +80,7 @@ class Plot:
         self.transparent = True
         self.display_once = False
         self.testing = False
+        self.solvent_selection = None #new LM20240301
         self.drs = [] #not in allowed keys. replaces drs used for bar interaction below #LM20240229
 
     def _determine_hetero_elements(self, solute: Solute):
@@ -197,6 +202,7 @@ class Plot:
         for rect, color in zip(rects, barcolors):
             dr = ClickableBar(rect, color, self)
             self.drs.append(dr)
+        self.original_drs = self.drs
 
         # font specifications
         matplotlib.rcParams.update({'font.size': self.fontsize})
@@ -271,15 +277,24 @@ class Plot:
 
             # legend with green bars and title specifications for "GUI"
             self._create_legend(ax, save_selected=True)
-            plt.title('Choose solvent molecules for solvation by clicking bars and close window\n')
+            #plt.title('Click bars or enter solvent ID. Then close window.\n') #edited and eventually commented out LM20240301
             # specify button
-            b = plt.axes([0.85, 0.9, 0.1, 0.075])  # set position
+            b = plt.axes((0.8, 0.9, 0.1, 0.075))  # set position
             button = Button(b, "Display RDF", color="0.85", hovercolor="0.95")  # set text and color
             callback_b = ButtonActions()  # init class with necessary functions and determine click actions
             button.on_clicked(lambda x: ButtonActions.plot_rdf(callback_b, self))
-            t = plt.axes([0.1, 0.1, 0.5, 0.075]) #left, bottom, width, height
-            txt_box = TextBox(t, "IDs:", "Enter solvent IDs here.")
+
+            # specify textbox
+            t = plt.axes((0.125, 0.9, 0.1, 0.075)) #left, bottom, width, height
+            global txt_box #needed to set txt_box to '' in self._input_selection. inspired by this: https://coderslegacy.com/python/matplotlib-textbox-widget/ (accessed 2024-03-01) LM20240301
+            txt_box = TextBox(t, "IDs:")
             txt_box.on_submit(self._input_selection)
+
+            # specify clear all
+            c = plt.axes((0.5, 0.9, 0.1, 0.075))
+            button_c = Button(c, "Clear all", color="0.85", hovercolor="0.95")  # set text and color
+            button_c.on_clicked(self._deselect_all)
+
             plt.show()
 
     def _interactive_reselection(self, solute: Solute, solvent: Solvent):
@@ -365,6 +380,8 @@ class Plot:
                 selected = True
 
     def _input_selection(self,text : str): #ids separated with ",". allows ranges with "-"
+        if len(text) == 0: #this in connection with set_val('') prevents the double submission of the textbox when clicking on a bar after input selection. fyi: on_submit gets triggered with enter and with leaving the textbox
+            return
         split = text.split(",")
         rm_list = []
         for i in range(len(split)):
@@ -389,25 +406,41 @@ class Plot:
 
         for r in rm_list:
             split.remove(r)
-        self.selected_solvents = list(set(sorted(split))) #overrules all previously clicked solvents
-        print("Selected solvents: {0}".format(self.selected_solvents))
+        split = [x for x in split if x in range(1,self.displayed_solvents+1)]
+        out = ','.join((str(x) for x in sorted(set(split))))
+        print("Selected solvents: {0}".format(out))
 
+        self.selected_solvents = sorted(set([x-1 for x in split]))  # overrules all previously clicked solvents
+
+        if len(self.drs) != 0: #that is the case when there is no barplot due to predefined solvent selection
+            for dr in self.drs:
+                try:
+                    if int(dr.rect.xy[0]) in self.selected_solvents:
+                        dr.color = self.colors['selected']
+                        canvas = dr.rect.figure.canvas
+                        axes = dr.rect.axes
+                        #dr.rect.set_animated(True)
+                        canvas.draw()
+                        dr.background = canvas.copy_from_bbox(dr.rect.axes.bbox)
+                        dr.rect.set_color(self.colors['selected'])
+                        axes.draw_artist(dr.rect)
+                        canvas.blit(axes.bbox)
+                except (ValueError,TypeError):
+                    print("Something was wrong with re-coloring the bars upon input selection!")
+                    return
+            txt_box.set_val('')
+
+    def _deselect_all(self,event):
+        print("Resetting plot...")
         for dr in self.drs:
-            try:
-                if int(dr.rect.xy[0]) in self.selected_solvents:
-                    dr.color = self.colors['selected']
-                    canvas = dr.rect.figure.canvas
-                    axes = dr.rect.axes
-                    dr.rect.set_animated(True)
-                    canvas.draw()
-                    dr.background = canvas.copy_from_bbox(dr.rect.axes.bbox)
-                    axes.draw_artist(dr.rect)
-                    canvas.blit(axes.bbox)
-                    #TODO: Create legend with selected solvents.
-            except (ValueError,TypeError):
-                print("Something was wrong with re-coloring the bars upon input selection!")
-                return
-
+            dr.color = dr.original_color
+            canvas = dr.rect.figure.canvas
+            axes = dr.rect.axes
+            dr.rect.set_color(dr.original_color)
+            axes.draw_artist(dr.rect)
+            canvas.blit(axes.bbox)
+        self.selected_solvents = []
+        print("Plot resetted!")
 
     def _save_selection(self, abb, solute: Solute, solvent: Solvent, reference: Reference) -> str:
         print('Number of solvents chosen: ' + str(len(self.selected_solvents)))
