@@ -37,11 +37,11 @@ class Plot:
                 warn('WARNING: Did not recognize key: ' + str(key))
 
     def gui(self, abb, solute: Solute, solvent: Solvent, reference: Reference) -> str:
-        if not self.testing and self.solvent_selection is None:
+        if not self.testing and not self.solvent_selection:
             self._determine_hetero_elements(solute)
             barcolors = self._determine_colors(solute, solvent)
             self._create_plot(barcolors, solvent, False)
-        elif not self.testing:
+        elif not self.testing and self.solvent_selection:
             self._input_selection(self.solvent_selection)
         else:
             self.selected_solvents = [0, 1, 2, 3, 4]
@@ -80,7 +80,7 @@ class Plot:
         self.transparent = True
         self.display_once = False
         self.testing = False
-        self.solvent_selection = None #new LM20240301
+        self.solvent_selection = False #new LM20240301
         self.drs = [] #not in allowed keys. replaces drs used for bar interaction below #LM20240229
 
     def _determine_hetero_elements(self, solute: Solute):
