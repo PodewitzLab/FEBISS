@@ -235,6 +235,8 @@ class GistAnalyser:
                     + str(self.rigid_atom_2) + ' ') #LM20231116: changed back to 3 rigid atoms since the user shall be able to decide whether to use COM or a central atom #only 2 rigid atoms will be used
             f.write('out ' + self.gist_out_file + ' ')
             f.write('quat ')
+            if not self.com:
+                f.write('nocom ')
             f.write('norm\n')
             #f.write('dx\n')
             #f.write('febiss ' + str(self.temp) + '\n')  # enables febiss placement in cpptraj

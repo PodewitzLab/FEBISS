@@ -67,6 +67,7 @@ class Reference:
         #self.top = top #can be None if using water
         self.solv_file = solv_file #contains path to mol2-file, new LM20231128: can also contain path to TP3.xyz file
         self.abb = abb  # can be None if using water
+        self.com = com
 
         if case == 1: #for case 1 we use TP3.xyz directly. No need for converter. LM20231128.
             self.xyz_path = solv_file
@@ -78,31 +79,37 @@ class Reference:
         self.cmol = self.mol.get_centered_molecule()
 
         if case == 1: #new LM20231128
-            #self.rigid_atom_idx_0 = None #1 = O if using water #used for testing if everything went well TODO: Implement com = False case. LM20231128
+            self.rigid_atom_idx_0 = None #1 = O if using water #used for testing if everything went well
             self.rigid_atom_idx_1 = None #used for testing if everything went well
             self.rigid_atom_idx_2 = None #used for testing if everything went well
-            if type(rigid_atom_1) == str and type(rigid_atom_2) == str: #if for some reason indices are given instead of atom names
+            if type(rigid_atom_0) == str and type(rigid_atom_1) == str and type(rigid_atom_2) == str: #LM20241203: added path for rigid_atom_0. #if for some reason indices are given instead of atom names
                 first = False #if H and H are chosen as rigid atoms
-                for atom in range(len(self.mol.labels)):
+                for atom in range(len(self.mol.labels)): #just works for water expecting O/COM, H and H for the input of rigid atoms
+                    if not self.com: #only for com = False
+                        if rigid_atom_0 == self.mol.labels[atom]:
+                            self.rigid_atom_idx_0 = atom
                     if not first and rigid_atom_1 == self.mol.labels[atom]:
                         self.rigid_atom_idx_1 = atom
                         first = True
                     elif rigid_atom_2 == self.mol.labels[atom]:
                         self.rigid_atom_idx_2 = atom
-                if self.rigid_atom_idx_1 == None or self.rigid_atom_idx_2 == None:
+                if self.rigid_atom_idx_0 == None or self.rigid_atom_idx_1 == None or self.rigid_atom_idx_2 == None:
                     quit("Something is wrong with declaring the rigid atoms. Please check all-settings.yaml!")
             else:
-                # self.rigid_atom_idx_0 = rigid_atom_0  # 1 = O if using water TODO: Implement com = False case. LM20231128
+                self.rigid_atom_idx_0 = rigid_atom_0  # 1 = O if using water TODO: Implement com = False case. LM20231128
                 self.rigid_atom_idx_1 = rigid_atom_1  # 2 = H if using water
                 self.rigid_atom_idx_2 = rigid_atom_2 #3 = H if using water
         else:
-            # self.rigid_atom_idx_0 = rigid_atom_0 #1 = O if using water
+            self.rigid_atom_idx_0 = rigid_atom_0 #1 = O if using water
             self.rigid_atom_idx_1 = rigid_atom_1 #2 = H if using water
             self.rigid_atom_idx_2 = rigid_atom_2 #3 = H if using water TODO: Implement com = False case. LM20231128
 
-        print("Using rigidatoms {0} and {1} for quaternion determination!".format(self.rigid_atom_idx_1, self.rigid_atom_idx_2))
+        if self.com:
+            print("Using rigidatoms {0} and {1} for quaternion determination!".format(self.rigid_atom_idx_1, self.rigid_atom_idx_2))
+        else:
+            print("Using rigidatoms {0}, {1} and {2} for quaternion determination!".format(self.rigid_atom_idx_0, self.rigid_atom_idx_1, self.rigid_atom_idx_2))
 
-        self.char_q = calc_quats(self.cmol, self.rigid_atom_idx_1, self.rigid_atom_idx_2)
+        self.char_q = calc_quats(self.cmol, self.rigid_atom_idx_0, self.rigid_atom_idx_1, self.rigid_atom_idx_2)
 
         #placement
         self.eq_dict = {} #new. stores 1) the rotation quat, 2) the equivalent structure as Molecule object and 3) the characteristic quat for the orientation of the molecule as tuple per symm_op. LM20231113
@@ -160,7 +167,7 @@ class Reference:
             write(self.xyz_path, return_path, coord_list)
             ref = Molecule.from_file(return_path.format(num))
 
-            char_quat = calc_quats(ref, self.rigid_atom_idx_1, self.rigid_atom_idx_2) #LM20231128: Changed from rigid_atom_0/1 to ..._1/2
+            char_quat = calc_quats(ref, self.rigid_atom_idx_0, self.rigid_atom_idx_1, self.rigid_atom_idx_2) #LM20231128: Changed from rigid_atom_0/1 to ..._1/2
 
 
             if distance(self.char_q,char_quat) < 0.05: #0.05 rad is around 3.18°
@@ -173,7 +180,7 @@ class Reference:
 
             num += 1
 
-    def _find_avg_solvent(self, voxel: int, quats: list[quat.quaternion], com: tuple[typing.Any,typing.Any,typing.Any], verbose = False): #new LM20231124
+    def _find_avg_solvent(self, voxel: int, quats: list[quat.quaternion], grid_point: tuple[typing.Any,typing.Any,typing.Any], verbose = False): #new LM20231124
         """
         This method finally:
         1) cleans up characteristic quaternions (quats) stored for the given voxel (voxel) by comparing them to the
@@ -217,7 +224,10 @@ class Reference:
 
         #step 3) and 4)
         qt = q_avg * inv(self.char_q) #quaternion for rotation of original orientation to orientation described by q_avg
-        new_coords = new_coord_gen(self.cmol, qt, np.array(com))
+        new_coords = new_coord_gen(self.cmol, qt, np.array(grid_point))
+
+        if not self.com: #in the nocom case, we translate the com by the coordinate of the rigid_atom_0
+            new_coords = list(np.array(new_coords) - self.cmol.cart_coords[self.rigid_atom_idx_0])
 
         if verbose:
             write(self.xyz_path, self._makedir("quats")+"/avg_at_voxel_{0}", new_coords, voxel)

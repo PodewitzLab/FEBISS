@@ -199,20 +199,27 @@ def vec_part(q:quat.quaternion):
     vec = list(help_list[1:4])
     return vec
 
-def calc_quats(mol: Molecule, i1: int, i2: int):
+def calc_quats(mol: Molecule, i0 : int, i1: int, i2: int):
     """
-    Calculates characteristic quaternion from positions of center of mass and of atoms i1 and i2 the way the quaternion
-    is calculated in cpptraj GIST.
+    Calculates characteristic quaternion from positions of the central_point (COM of rigid_atom_0) and of atoms
+    i1 and i2 the way the quaternion is calculated in cpptraj GIST.
 
     :param mol: Molecule object
+    :param i0: index number of atom 0
     :param i1: index number of atom 1
     :param i2: index number of atom 2
     :return: quaternion object
     """
-    at1 = (mol.cart_coords[i1] - mol.center_of_mass) / np.linalg.norm(
-        mol.cart_coords[i1] - mol.center_of_mass)
-    at2 = (mol.cart_coords[i2] - mol.center_of_mass) / np.linalg.norm(
-        mol.cart_coords[i2] - mol.center_of_mass)
+    if i0 == -1:
+        central_point = mol.center_of_mass
+    else: #nocom case
+        central_point = mol.cart_coords[i0]
+
+
+    at1 = (mol.cart_coords[i1] - central_point) / np.linalg.norm(
+        mol.cart_coords[i1] - central_point)
+    at2 = (mol.cart_coords[i2] - central_point) / np.linalg.norm(
+        mol.cart_coords[i2] - central_point)
     q = quat.from_float_array(np.array(gist_quat(at1, at2)))
     return q
 

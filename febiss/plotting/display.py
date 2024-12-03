@@ -462,8 +462,8 @@ class Plot:
         for select in self.selected_solvents: #TODO: Check if selected_solvents order coincides with order of solvent.coord entries, i.e. are solvent.coord entries sorted wrt their energy
             voxel = int(solvent.data[select][0]) #new LM20231123. LM20231130: type conversion from str to int. TODO: Type conversion prone to ValueError
             quats = solvent.quats[voxel] #new LM20231123
-            com = (float(solvent.data[select][1]), float(solvent.data[select][2]), float(solvent.data[select][3])) #new LM20231123. LM20231130: conversion from str to int. TODO: Prone to ValueError.
-            elements, coords = reference._find_avg_solvent(voxel, quats, com, verbose=False) #new LM20231123. This finally determines the solvent to be placed.
+            grid_point = (float(solvent.data[select][1]), float(solvent.data[select][2]), float(solvent.data[select][3])) #new LM20231123. LM20231130: conversion from str to int. TODO: Prone to ValueError.
+            elements, coords = reference._find_avg_solvent(voxel, quats, grid_point, verbose=False) #new LM20231123. This finally determines the solvent to be placed.
             values = float(solvent.data[select][-1]) #new LM20231124. #LM20231130 conversion from str to float
             selected_solvent.elements.extend(elements) #changed from append which does not work since elements is a list itself. LM20231130
             selected_solvent.coords.extend(coords) #changed from select * 3 in brackets LM20231123. #changed from append which does not work since elements is a list itself. LM20231130

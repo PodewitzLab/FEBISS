@@ -101,7 +101,7 @@ def main():
         os.chdir(cwd)
         print('\nInstallation successful, these are the saved settings:')
         print(open(SETTINGS_FILE, 'r').read())
-    elif param['singularity']) == True:
+    elif param['singularity'] == True:
         print('Not yet implemented!')
     else:
         raise TypeError('Please check your yaml-file. Parameter "singularity" only takes "True" or "False"')
