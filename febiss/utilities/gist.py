@@ -46,7 +46,17 @@ class GistAnalyser:
         self._set_defaults(case, com)
 
         #set required keys
-        self.required_keys = {'top', 'trajectory_file', 'solv_file'} #new LM20231128: also case 1 needs solv_file (TP3.xyz in febiss/solvents). #changed to trajectory_file since trajectory_format is not used anymore LM20231115
+        self.required_keys = {'top',
+                              'trajectory_file',
+                              'solv_file',
+                              'refdens',
+                              'solv_abb',
+                              'rigid_atom_0',
+                              'rigid_atom_1',
+                              'rigid_atom_2'
+                              } #new LM20241226: all cases have the same required keys. new LM20231128: also case 1 needs solv_file (TP3.xyz in febiss/solvents). #changed to trajectory_file since trajectory_format is not used anymore LM20231115
+
+        ''' #commented out 20241226
         if case in [2, 3]: #also in case two with a custom water file, one has to define the rigid atoms.
             self.required_keys.update(['refdens',
                                        'solv_abb',
@@ -55,6 +65,7 @@ class GistAnalyser:
                                        'rigid_atom_2'
                                        #'char_angle'
                                        ])
+        '''
 
         for key in self.required_keys:
             if key not in kwargs.keys():
@@ -63,20 +74,32 @@ class GistAnalyser:
         self.__dict__.update((key, kwargs[key]) for key in self.required_keys)
 
         #set allowed keys
-        self.allowed_keys = {'frame_selection', 'grid_center', 'grid_spacing', 'grid_lengths',
-                             'refdens', 'solute_residues', 'gist_cpptraj_command_file', 'gist_out_file', 'rdf', 'rdf_names',
-                             'gist_grid_file', 'solv_abb', 'solv_file', 'rigid_atom_0', 'rigid_atom_1', 'rigid_atom_2' #'char_angle', 'trajectory_format',
-                             } # changed back to 3 possible rigid atoms since the user shall be able to choose whether to use the com or a central atom LM20231116
+        self.allowed_keys = {'frame_selection',
+                             'grid_center',
+                             'grid_spacing',
+                             'grid_lengths',
+                             'solute_residues',
+                             'gist_cpptraj_command_file',
+                             'gist_out_file',
+                             'rdf',
+                             'rdf_names',
+                             'gist_grid_file', #'refdens', 'solv_abb', 'solv_file', 'rigid_atom_0', 'rigid_atom_1', 'rigid_atom_2' #'char_angle', 'trajectory_format',
+                             } #new LM20241226: commented out refdens, solv_abb, solv_file, rigid_atom_0/1/2, since they are required in every case (1-3)
+                               # changed back to 3 possible rigid atoms since the user shall be able to choose whether to use the com or a central atom LM20231116
                                # #only 2 rigid atoms since COM will be used
+
+        ''' #commented out LM20241226
         if case in [2, 3]:
             self.allowed_keys.difference_update([
                 'refdens',
                 'solv_abb',
                 'rigid_atom_0',
                 'rigid_atom_1',
-                'rigid_atom_2'
+                'rigid_atom_2',
+                'solv_file',
                  #'char_angle'
                  ])
+        '''
 
         self.__dict__.update((k, v) for k, v in kwargs.items() if k in self.allowed_keys)
 

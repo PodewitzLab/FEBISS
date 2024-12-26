@@ -1,7 +1,5 @@
 import numpy as np
 import quaternion
-import quaternion as quat
-from pymatgen.symmetry import analyzer as ana
 from pymatgen.core import Molecule
 
 class Util:

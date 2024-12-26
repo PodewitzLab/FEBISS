@@ -1,5 +1,3 @@
-import os
-
 import quaternion
 
 from utilities.structure_randomizer import write_xyz as write
@@ -467,14 +465,52 @@ def clean_up_test(ori_path,test_paths:list[str],refdir_path, i1 = 3, i2 = 4, abb
 
     print("Char_qs before cleanup: {0}".format(char_q_list_before_cleanup))
     print("Char_qs after cleanup: {0}".format(char_q_list_after_cleanup))
+    for i in range(len(key_list)):
 
-# clean_up_test('./QuatCleanup/ORI/ACN_ORI.xyz',
-#               [
-#                   './QuatCleanup/RANDOM/ACN_46.xyz',
+        print("Distance of average q after cleanup to {0} is: {1}".format(i,distance(q_avg_after,stp[3][i+1])))
+
+#    clean_up_test('../solvents/ACN/RANDOM/ACN_5.xyz',
+#                  ['./QuatCleanup/RANDOM/ACN_46.xyz',
 #                   './QuatCleanup/RANDOM/ACN_46_rot_0_H13.xyz',
 #                   './QuatCleanup/RANDOM/ACN_46_rot_1_H13.xyz',
 #                   './QuatCleanup/RANDOM/ACN_46_rot_2_H31.xyz',
-#                   './QuatCleanup/RANDOM/ACN_46_rot_3_H31.xyz',
-#               ],
-#               './QuatCleanup/REFDIR',i1=2,i2=3)
+#                   './QuatCleanup/RANDOM/ACN_46_rot_3_H31.xyz'],
+#                  './QuatCleanup/test_241204_5',i1=2,i2=3)
 
+clean_up_test('../solvents/ACN/RANDOM/ACN_36.xyz',
+              ['../solvents/ACN/RANDOM/ACN_0.xyz',
+               '../solvents/ACN/RANDOM/ACN_1.xyz',
+               '../solvents/ACN/RANDOM/ACN_2.xyz',
+               '../solvents/ACN/RANDOM/ACN_3.xyz',
+               '../solvents/ACN/RANDOM/ACN_4.xyz',
+               '../solvents/ACN/RANDOM/ACN_6.xyz',
+               '../solvents/ACN/RANDOM/ACN_7.xyz',
+               '../solvents/ACN/RANDOM/ACN_8.xyz',
+               '../solvents/ACN/RANDOM/ACN_9.xyz',
+               '../solvents/ACN/RANDOM/ACN_10.xyz',
+               '../solvents/ACN/RANDOM/ACN_11.xyz',
+               '../solvents/ACN/RANDOM/ACN_12.xyz',
+               '../solvents/ACN/RANDOM/ACN_13.xyz',
+               '../solvents/ACN/RANDOM/ACN_14.xyz',
+               '../solvents/ACN/RANDOM/ACN_15.xyz',
+               '../solvents/ACN/RANDOM/ACN_16.xyz',
+               '../solvents/ACN/RANDOM/ACN_17.xyz',
+               '../solvents/ACN/RANDOM/ACN_18.xyz',
+               '../solvents/ACN/RANDOM/ACN_19.xyz',
+               '../solvents/ACN/RANDOM/ACN_20.xyz',
+               '../solvents/ACN/RANDOM/ACN_21.xyz',
+               '../solvents/ACN/RANDOM/ACN_22.xyz',
+               '../solvents/ACN/RANDOM/ACN_23.xyz',
+               '../solvents/ACN/RANDOM/ACN_24.xyz',
+               '../solvents/ACN/RANDOM/ACN_25.xyz',
+               '../solvents/ACN/RANDOM/ACN_26.xyz',
+               '../solvents/ACN/RANDOM/ACN_27.xyz',
+               '../solvents/ACN/RANDOM/ACN_28.xyz',
+               '../solvents/ACN/RANDOM/ACN_29.xyz',
+               '../solvents/ACN/RANDOM/ACN_30.xyz',
+               '../solvents/ACN/RANDOM/ACN_31.xyz',
+               '../solvents/ACN/RANDOM/ACN_32.xyz',
+               '../solvents/ACN/RANDOM/ACN_33.xyz',
+               '../solvents/ACN/RANDOM/ACN_34.xyz',
+               '../solvents/ACN/RANDOM/ACN_35.xyz'],
+              './QuatCleanup/test_241204_6',i1=2,i2=3)
