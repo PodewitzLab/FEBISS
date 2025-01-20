@@ -148,7 +148,7 @@ def main():
     reference = Reference(case, com, analyser.solv_file, analyser.solv_abb, analyser.rigid_atom_0, analyser.rigid_atom_1, analyser.rigid_atom_2) #new: pass all 3 rigid_atoms to account for case 1.
     #analyser.perform_solute_write_out() #DEPRECATED LM20231124. #new: instead of direct calling write_solute_pdb.py
     analyser.perform_gist_analysis()
-    analyser.perform_febiss_analysis()
+    #analyser.perform_febiss_analysis() #LM20250120: commented out since febiss analysis is carried out during the gist analysis
 
     #elif "GIST" in param.keys():
     #    from ..utilities.gist import GistAnalyser

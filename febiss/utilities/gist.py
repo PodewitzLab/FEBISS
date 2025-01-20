@@ -120,7 +120,7 @@ class GistAnalyser:
 
     def perform_gist_analysis(self):
         #changed from checking for febiss-solvents.pdb to gist-output.dat
-        if os.path.exists('gist-output.dat'):
+        if os.path.exists('febiss.dat'):
             warn("WARNING: 'gist-output.dat' is already present in directory.")
             while True:
                 if Input("Do you want to analyze the trajectory again? [y/n]").yn():
@@ -134,9 +134,9 @@ class GistAnalyser:
         self._write_gist_input_line()
         self._execute_cpptraj(self.gist_cpptraj_command_file)
         # changed from febiss-solvents.pdb to gist-output.dat
-        if not os.path.exists('gist-output.dat'):
+        if not os.path.exists('febiss.dat'):
             raise UnsuccessfulAnalysisException(
-                "'gist-output.dat' is not present, the CPPTRAJ analysis did not work.")
+                "'febiss.dat' is not present, the CPPTRAJ analysis did not work.")
         #self._write_out_gist_grid()
 
 
@@ -146,6 +146,8 @@ class GistAnalyser:
             self._write_rdf_input_line(value, key)
             self._execute_cpptraj(self.gist_cpptraj_command_file)
 
+
+    """
     def perform_febiss_analysis(self): #TODO: take different value in all-settings.yaml for febiss-file into account
         #following if-branch adopted from perform_gist_analysis(self). LM20231005
         if os.path.exists('febiss.dat'): #changed from febiss-solvents.pdb LM20231123
@@ -162,6 +164,7 @@ class GistAnalyser:
         if not os.path.exists('febiss.dat'): #new LM20231122: changed filename to febiss-solvents.pdb
             raise UnsuccessfulAnalysisException(
                 "'febiss.dat' is not present, the CPPTRAJ analysis did not work.")
+    """
 
 
     def _set_defaults(self,case,com):
@@ -214,6 +217,7 @@ class GistAnalyser:
             f.write('center ' + self.solute_residues + ' origin\n')
             f.write('image origin center familiar\n')
 
+    """
     def _write_febiss_cpptraj_file(self): #this creates the content for febiss.in. renamed from _write_cpptraj_file(). LM20231005
         self._find_febiss_info()
         with open(self.febiss_cpptraj_command_file, 'w') as f:
@@ -225,6 +229,7 @@ class GistAnalyser:
             f.write('febiss refdens '+ str(self.refdens) + #'occurrence' + str(self.occurrence) +
                     ' solvnum ' + str(self.nsolvent) + ' nframes ' + str(self.nframes) + '\n')
             f.write('run')
+"""
 
     def _sanity_check(self):
         # TODO: typedict for other keys?
@@ -233,6 +238,7 @@ class GistAnalyser:
         elif len(glob.glob(self.trajectory_file)) == 0:
             raise InvalidInputException('The given trajectory name or format is invalid')
 
+    """
     def _find_febiss_info(self):  # assumption: (occurrence, not anymore LM20231122), nsolvents, nframes are in self.quatfile -> 2nd row
         with open(self.quatfile, 'r') as f:
             line = f.readlines()[1].split()
@@ -241,6 +247,7 @@ class GistAnalyser:
             self.nsolvent = help1[1]
             help2 = line[1].split("=")
             self.nframes = help2[1]
+    """
 
     def _write_gist_input_line(self):
         with open(self.gist_cpptraj_command_file, 'a') as f:
@@ -260,9 +267,9 @@ class GistAnalyser:
             f.write('quat ')
             if not self.com:
                 f.write('nocom ')
-            f.write('norm\n')
+            f.write('norm ')
             #f.write('dx\n')
-            #f.write('febiss ' + str(self.temp) + '\n')  # enables febiss placement in cpptraj
+            f.write('febiss\n')  # enables febiss placement in cpptraj
             f.write('run\n')
             f.write('center :1 origin\n') #new LM20231124
             f.write('strip :{0}\n'.format(self.solv_abb)) #new LM20231124
