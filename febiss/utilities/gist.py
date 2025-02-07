@@ -50,6 +50,7 @@ class GistAnalyser:
                               'trajectory_file',
                               'solv_file',
                               'refdens',
+                              'ref_eww',
                               'solv_abb',
                               'rigid_atom_0',
                               'rigid_atom_1',
@@ -178,19 +179,19 @@ class GistAnalyser:
         self.rigid_atom_0 = 0 #Changed to 0 as default. LM20231212.
         self.rigid_atom_1 = 1 #Changed to 1 as default. LM20231212.
         self.rigid_atom_2 = 2 #Changed to 2 as default. LM20231212.
+        self.ref_eww = None
         #changed back to 3 rigid atoms since the user shall be able to choose whether COM is used or not LM20231116 #only two rigid atoms since COM will be used
         self.frame_selection = None
         self.grid_center = None
         #self.trajectory_format = "cdf" #not used anymore LM20231115
         self.grid_spacing = 0.5
         self.grid_lengths = (60, 60, 60)
-        if self.case in [1, 2]:
-            self.refdens = 0.0334 #LM20231207: changed from 0.0329 # tip3p
-            #self.char_angle not needed anymore since tip3p water is given as xyz file. LM20231128
-            #self.char_angle = 104.52  # tip3p #changed from 104.57 according to Jorgensen et al., The Journal of Chemical Physics 1983, 79 (2), 926–935. https://doi.org/10.1063/1.445869. LM20231128
-        else:
-            self.refdens = None#Input("Provide reference density as float:\n", type=float)
-            #self.char_angle = None#Input("Provide characteristic angle as float:\n", type=float)
+        self.refdens = None #LM20250207: Changed it to None for all cases. #LM20231207: changed from 0.0329 # tip3p
+        #self.char_angle not needed anymore since tip3p water is given as xyz file. LM20231128
+        #self.char_angle = 104.52  # tip3p #changed from 104.57 according to Jorgensen et al., The Journal of Chemical Physics 1983, 79 (2), 926–935. https://doi.org/10.1063/1.445869. LM20231128
+        #else:
+        #    self.refdens = None#Input("Provide reference density as float:\n", type=float)
+        #    #self.char_angle = None#Input("Provide characteristic angle as float:\n", type=float)
         self.quatfile = 'gist-quats.dat'
         #self.occurrence = 0 #number of how often the central atom species is present in the solvent molecule
         self.nsolvent = 0 #number of solvents used in the simulation
@@ -212,7 +213,7 @@ class GistAnalyser:
                 # if not given CPPTRAJ uses all frames
                 f.write(' ' + self.frame_selection)
             f.write('\n')
-            if self.case in [2,3]:
+            if self.case == 3: #LM20250207: deleted case 2
                 f.write('solvent ' + f':{self.solv_abb}\n')
             f.write('center ' + self.solute_residues + ' origin\n')
             f.write('image origin center familiar\n')

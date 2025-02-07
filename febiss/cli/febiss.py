@@ -143,7 +143,8 @@ def main():
     grid_length_2 = int(analyser.grid_lengths.strip('()').split(',')[2])
     nvoxels = grid_length_0*grid_length_1*grid_length_2
 
-    solvent = Solvent(nvoxels=nvoxels)
+
+    solvent = Solvent(nvoxels=nvoxels, ref_eww=analyser.ref_eww)
     solute = Solute()
     reference = Reference(case, com, analyser.solv_file, analyser.solv_abb, analyser.rigid_atom_0, analyser.rigid_atom_1, analyser.rigid_atom_2) #new: pass all 3 rigid_atoms to account for case 1.
     #analyser.perform_solute_write_out() #DEPRECATED LM20231124. #new: instead of direct calling write_solute_pdb.py

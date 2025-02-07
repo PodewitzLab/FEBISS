@@ -8,7 +8,7 @@ See LICENSE for details
 
 
 CASE_DICT = {1: "TIP3P",
-             2: "PATH_TO_WATER_FILE",
+             #2: "PATH_TO_WATER_FILE",
              3: "PATH_TO_PYCONSOLV_FILE",
              4: "PATH_TO_SOLVENT_FILE"}
 """
@@ -84,24 +84,43 @@ RIGID_ATOMS_DICT = { #LM20231207: added -1 on every index since the first atom h
     }
 
 REF_DENS_DICT = {
-    #densities (at temperatures 20/25 °C) obtained from CRC Handbook of Chemistry and Physics, 97th ed.;
+    # densities for ACN, ACT, BNZ, CL3, CL4, DCM, DMS, ETL, MTL, TOL und TP3 obtained from GIST simulations of the pure solvent.
+
+    # densities of PYR and THF (at temperatures 20/25 °C) obtained from CRC Handbook of Chemistry and Physics, 97th ed.;
     # Haynes, W. M., Lide, D. R., Bruno, T. J., Eds.; CRC Press, Taylor & Francis Group: Boca Raton, FL, 2017.
     # https://doi.org/10.1201/9781315380476. p. 15-13 ff.,
-    # NH3: NIST database at 1.013 bar and 25 C
-    # TP3: CPPTRAJ manual (December 16, 2022), p. 123
-    "ACN" : 0.0115,
-    "ACT" : 0.0082,
-    "BNZ" : 0.0068,
-    "CL3" : 0.0075,
-    "CL4" : 0.0062,
-    "DCM" : 0.0094,
-    "DMS" : 0.0085,
-    "ETL" : 0.0103,
-    "MTL" : 0.0149,
+
+    # density of NH3: NIST database at 1.013 bar and 25 C
+    "ACN" : 0.0121,
+    "ACT" : 0.0085,
+    "BNZ" : 0.0066,
+    "CL3" : 0.0073,
+    "CL4" : 0.0061,
+    "DCM" : 0.0090,
+    "DMS" : 0.0089,
+    "ETL" : 0.0106,
+    "MTL" : 0.0154,
     "NH3" : 0.000025,
     "PYR" : 0.0075,
     "THF" : 0.0074,
-    "TOL" : 0.0057,
-    "TP3" : 0.0334,
+    "TOL" : 0.0055,
+    "TP3" : 0.0329,
 }
 
+REF_EWW = {
+    #reference values obtained using gisttools v. 0.4 (https://github.com/liedllab/gisttools/commit/3b7d362d020e3b8c620e407de21bf58c760b7692)
+    "ACN": -11.51,
+    "ACT": -9.33,
+    "BNZ": -6.95,
+    "CL3": -6.49,
+    "CL4": -7.25,
+    "DCM": -6.02,
+    "DMS": -14.77,
+    "ETL": -12.80,
+    "MTL": -10.17,
+    "TOL": -8.073,
+    "NH3": None,
+    "PYR": None,
+    "THF": None,
+    "TP3": -9.544,
+}

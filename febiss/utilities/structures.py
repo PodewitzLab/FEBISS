@@ -65,14 +65,18 @@ class Reference:
     """
     def __init__(self, case, com, solv_file = None, abb : str = "WAT", rigid_atom_0 : int = 0, rigid_atom_1 : int = 1, rigid_atom_2 : int = 2): #3 rigid atoms again as of 28 Nov 2023 to account for case 1. only 2 rigid_atoms LM20231113. #before 25 September 2023: __init__(self, top, abb, size, rigid_atom_0, rigid_atom_1, rigid_atom_2):
         #self.top = top #can be None if using water
-        self.solv_file = solv_file #contains path to mol2-file, new LM20231128: can also contain path to TP3.xyz file
+        self.solv_file = solv_file #contains path to mol2 or xyz-file, LM20250120: allowed are mol2 and xyz files. LM20231128: can also contain path to TP3.xyz file.
         self.abb = abb  # can be None if using water
         self.com = com
 
-        if case == 1: #for case 1 we use TP3.xyz directly. No need for converter. LM20231128.
+        if self.solv_file.split(".")[-1] == "xyz": #LM20250120: no case distinction but action based on given file ending. #for case 1 we use TP3.xyz directly. No need for converter. LM20231128.
+            print("xyz-file given!")
             self.xyz_path = solv_file
-        else:
+        elif self.solv_file.split(".")[-1] == "mol2":
             self.xyz_path = converter(os.path.dirname(self.solv_file), self.abb) #converter is from mol2_to_xyz and returns path of generated xyz-file.
+            print("mol2-file given!")
+        else:
+            quit("Only xyz and mol2 files can be given as solvent molecules!")
 
         self.refdir_path = None #new LM20231124. Gets defined in _process_equivalent_structures(). Contains path to parent directory.
         self.mol = Molecule.from_file(self.xyz_path) #pymatgen interface
@@ -227,7 +231,13 @@ class Reference:
         new_coords = new_coord_gen(self.cmol, qt, np.array(grid_point))
 
         if not self.com: #in the nocom case, we translate the com by the coordinate of the rigid_atom_0
-            new_coords = list(np.array(new_coords) - self.cmol.cart_coords[self.rigid_atom_idx_0])
+            if verbose:
+                print('new coords before = {0}'.format(new_coords))
+            new_coords = list(np.array(new_coords) + (np.array(grid_point)-np.array(new_coords[0])))
+            if verbose:
+                print('new coords after = {0}'.format(new_coords))
+                print('grid point = {0}'.format(grid_point))
+
 
         if verbose:
             write(self.xyz_path, self._makedir("quats")+"/avg_at_voxel_{0}", new_coords, voxel)
@@ -247,13 +257,14 @@ class Solvent: #in original Febiss: class Water
        These objects make use of the attribute coords (for the COM coord),
        quats (which are loaded from the gist-quats.dat file), elements and elem_coords (for the solvent atom coords).
     """
-    def __init__(self, nvoxels = 0):
+    def __init__(self, nvoxels = 0, ref_eww = 0):
         self.data = [] #new LM20231123: data (i.e. voxel x y z energy) is passed as 5-tuple
         self.coords = [] #new LM20231123: holds coords of COMs
         self.values = [] #new (actually also in original Febiss) LM20231123: holds energy values of solvent molecules. needed for plotting
         self.elements = [] #new (actually also in original Febiss) LM20231123: holds the elements of the solvent to be placed
         self.quats = self._prep_dict(nvoxels) #new LM20231123: holds all the quats from gist-quats.dat associated with. keys are voxel numbers
         self.elem_coords = []
+        self.ref_eww = ref_eww
 
     def sort_by_energy(self): #renamed from sort_by_value. LM20231123
         self.data = sorted(self.data, key=lambda tpl: tpl[-1],reverse=True)
@@ -269,7 +280,7 @@ class Solvent: #in original Febiss: class Water
 
     def get_energy(self): #TODO: merge with get_coord_set
         for com in self.data:
-            self.values.append(float(com[-1])) #TODO: Prone to ValueError LM20231127
+            self.values.append(float(com[-1])+self.ref_eww) #LM20250207: Introduced correction by eww value of bulk, as suggested by Waibl et al. (J. Chem. Phys. 156, 204101 (2022)) #TODO: Prone to ValueError LM20231127
 
     def _prep_dict(self, nvoxels):
         quat_dict = {}
