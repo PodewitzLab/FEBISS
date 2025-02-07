@@ -2,14 +2,14 @@
 # -*- coding: utf-8 -*-
 __copyright__ = """
 This code is licensed under the MIT license.
-Copyright University Innsbruck, Institute for General, Inorganic, and Theoretical Chemistry, Podewitz Group
+Copyright Technische Universität Wien, Institute of Materials Chemistry, Podewitz Group
 See LICENSE for details
 """
 
 from collections import OrderedDict
 from matplotlib.ticker import FormatStrFormatter
 from matplotlib.widgets import Button
-from matplotlib.widgets import TextBox #new LM20240229
+from matplotlib.widgets import TextBox
 from typing import List
 from warnings import warn
 import matplotlib
@@ -48,6 +48,7 @@ class Plot:
 
         if self.display_once:
             sys.exit()
+
         # avoid bug of selecting out of range solvent
         if -1 in self.selected_solvents:
             self.selected_solvents.remove(-1)
@@ -57,7 +58,7 @@ class Plot:
 
     def _set_defaults(self):
         # default values for bar chart
-        self.selected_solvents = [] #get written in class ClickableBar #LM20231123
+        self.selected_solvents = [] #get written in class ClickableBar
         self.cutoff1 = 3.0 #distance between solute and solvent
         self.cutoff2 = 6.0 #distance between solute and solvent
         self.displayed_solvents = 50
@@ -66,7 +67,7 @@ class Plot:
         self.width = 16
         self.height = 8
         self.dpi = 200
-        self.xlabel = 'ID of solvent molecule (click bar or enter ID to select)' #changed LM20240301
+        self.xlabel = 'ID of solvent molecule (click bar or enter ID to select)'
         self.ylabel = '$-$ Free Energy / kcal mol$^{-1}$'
         self.selected_plotname = 'febiss-plot-selected.png'
         self.plotname = 'febiss-plot.png'
@@ -75,13 +76,13 @@ class Plot:
         self.number_xtics = 10
         self.y_numbers = 0.25
         self.marks = []
-        self.febiss_file = 'febiss.dat' #changed from febiss-solvents.pdb LM20231123
+        self.febiss_file = 'febiss.dat'
         self.rdf_names = {'center2': 'center of solute', 'C': 'carbon', 'O': 'oxygen', 'N': 'nitrogen', 'P': 'phosphor'}
         self.transparent = True
         self.display_once = False
         self.testing = False
-        self.solvent_selection = False #new LM20240301
-        self.drs = [] #not in allowed keys. replaces drs used for bar interaction below #LM20240229
+        self.solvent_selection = False
+        self.drs = []
 
     def _determine_hetero_elements(self, solute: Solute):
         self.existing_elements = []
@@ -97,76 +98,51 @@ class Plot:
         """ set cutoffs """
         squared_cutoff1 = self.cutoff1 ** 2
         squared_cutoff2 = self.cutoff2 ** 2
-        # if distance between two solvent atoms below this,
-        # they belong to same solvent molecule, but they have to be in pdb file within 2 rows)
-        # same_solvent_cutoff = 1.6 #not needed since per solvent only the com is given LM20231123
-        #squared_same_solvent_cutoff = same_solvent_cutoff ** 2 #not needed since per solvent only the com is given LM20231123
-        #if len(solute.polars) == 0: #not needed since the distance between solvent and solute will be measured between solvent COM and the nearest solute atom regardless of polarity
-        #    solute.determine_polar_hydrogen_and_non_hydrogen() #gives all non-H atoms and polar hydrogen. Attention - unclear whether using the polar cut-off for H as done here is valid LM20231027
         within_cutoff = []
         between_cutoffs = []
         outside_cutoff2 = []
         """ cycle over solvents and assign to list for each polar solute atom """
-        #skip_next = False #not needed LM20231123
-        #skip_next_next = False #not needed LM20231123
-        for count, sol in enumerate(solvent.coords): #this iterates through all atoms of the febiss_solvents.pdb which are marked with "HETATM" therefore either H or O information. LM20231027
-            #if skip_next: #this and next 6 lines not needed LM20231123
-            #    if skip_next_next:
-            #        skip_next_next = False
-            #        continue
-            #    else:
-            #        skip_next = False
-            #        continue
-            for atom in solute.coords: #changed from: "for polar in solute.polars:" LM20231123
-                if distance_squared(atom, sol) < squared_cutoff1: #changed from polar to atom LM20231123
+
+        for count, sol in enumerate(solvent.coords):
+
+            for atom in solute.coords:
+                if distance_squared(atom, sol) < squared_cutoff1:
                     within_cutoff.append(count)
-                    # relies on atoms of same solvent molecule to be right after each other in pdb!
-                    #for i in range(-2, 3): #this and next 8 lines not needed because there is just one entry (the COM) per solvent and not several atoms LM20231123
-                    #    # bound check and then distance
-                    #    if i != 0 and len(solvent.elements) > count + i > 0 \
-                    #            and distance_squared(sol, solvent.atoms[count + i]) < squared_same_solvent_cutoff:
-                    #        within_cutoff.append(count + i)
-                    #        if i == 1:
-                    #            skip_next = True
-                    #        elif i == 2:
-                    #            skip_next_next = True
-                    break  # close enough solute atom was found for solvent within cutoff -> break loop over solute atoms
-                elif distance_squared(atom, sol) > squared_cutoff2: #changed from polar to atom LM20231123
+                    break  #close enough solute atom was found for solvent within cutoff -> break loop over solute atoms
+                elif distance_squared(atom, sol) > squared_cutoff2:
                     outside_cutoff2.append(count)
                 else:
                     between_cutoffs.append(count)
-
-
 
         """ delete multiple entries """
         within_cutoff = list(OrderedDict.fromkeys(within_cutoff))
         between_cutoffs = list(OrderedDict.fromkeys(between_cutoffs))
         outside_cutoff2 = list(OrderedDict.fromkeys(outside_cutoff2))
+
         """ remove duplicate between different lists """
         # within overrules between
         for within in within_cutoff:
             for between in between_cutoffs:
                 if within == between:
                     between_cutoffs.remove(between)
+
         # within overrules outside (possible because distance of all solute atoms and solvents are calculated)
         for within in within_cutoff:
             for outside in outside_cutoff2:
                 if within == outside:
                     outside_cutoff2.remove(outside)
+
         # between overrules outside
         for outside in outside_cutoff2:
             for between in between_cutoffs:
                 if outside == between:
                     outside_cutoff2.remove(outside)
+
         """ set colors """
-        barcolors = [self.colors['outside']] * len(solvent.coords) #changed from solvent.elements which contained H,H,O for one water molecule and therefore 3*nsolvent entries
+        barcolors = [self.colors['outside']] * len(solvent.coords)
         for within in within_cutoff:
-            #if solvent.elements[within] == "O": #not needed since just one entry per solvent LM20231123
-            #    index = int(round(within / 3)) #not needed since just one entry per solvent LM20231123
                 barcolors[within] = self.colors['within']
         for outside in between_cutoffs:
-            #if solvent.elements[outside] == "O": #same as above LM20231123
-            #    index = int(round(outside / 3)) #same as above LM20231123
                 barcolors[outside] = self.colors['between']
 
         return barcolors
@@ -198,7 +174,6 @@ class Plot:
         rects = ax.bar(indices, solvent.values, color=barcolors, picker=True)  # create bars
 
         # make bars interactive
-        #drs = []  # necessary for interaction
         for rect, color in zip(rects, barcolors):
             dr = ClickableBar(rect, color, self)
             self.drs.append(dr)
@@ -257,13 +232,13 @@ class Plot:
 
         # set tics and limits
         plt.xticks(np.arange(0, xmax + xstep, step=xstep))
-        if ymin == ymax == 0.0: #TODO: Change to try-except to catch if ymax == ymin. LM20231127
+        if ymin == ymax == 0.0: #TODO: Change to try-except to catch if ymax == ymin.
             ymax = 1
             ystep = 0.1
         plt.yticks(np.arange(ymin, ymax + ystep, step=ystep))
         ax.set_ylim([ymin, ymax])
         ax.set_xlim([xmin, xmax])
-        ax.tick_params(axis='both', which='major', labelsize=self.fontsize)  # https://stackoverflow.com/questions/6390393/how-to-change-tick-label-font-size/11386056#11386056 (accessed 14 December 2023)
+        ax.tick_params(axis='both', which='major', labelsize=self.fontsize)
 
         # creates legend according with or without green bar
         self._create_legend(ax, save_selected)
@@ -277,7 +252,7 @@ class Plot:
 
             # legend with green bars and title specifications for "GUI"
             self._create_legend(ax, save_selected=True)
-            #plt.title('Click bars or enter solvent ID. Then close window.\n') #edited and eventually commented out LM20240301
+
             # specify button
             b = plt.axes((0.8, 0.9, 0.1, 0.075))  # set position
             button = Button(b, "Display RDF", color="0.85", hovercolor="0.95")  # set text and color
@@ -286,7 +261,7 @@ class Plot:
 
             # specify textbox
             t = plt.axes((0.125, 0.9, 0.1, 0.075)) #left, bottom, width, height
-            global txt_box #needed to set txt_box to '' in self._input_selection. inspired by this: https://coderslegacy.com/python/matplotlib-textbox-widget/ (accessed 2024-03-01) LM20240301
+            global txt_box
             txt_box = TextBox(t, "IDs:")
             txt_box.on_submit(self._input_selection)
 
@@ -380,7 +355,9 @@ class Plot:
                 selected = True
 
     def _input_selection(self,text : str): #ids separated with ",". allows ranges with "-"
-        if len(text) == 0: #this in connection with set_val('') prevents the double submission of the textbox when clicking on a bar after input selection. fyi: on_submit gets triggered with enter and with leaving the textbox
+        # this in connection with set_val('') prevents the double submission of the textbox when clicking on a bar after
+        # input selection. fyi: on_submit gets triggered with enter and with leaving the textbox
+        if len(text) == 0:
             return
         split = text.split(",")
         rm_list = []
@@ -419,7 +396,6 @@ class Plot:
                         dr.color = self.colors['selected']
                         canvas = dr.rect.figure.canvas
                         axes = dr.rect.axes
-                        #dr.rect.set_animated(True)
                         canvas.draw()
                         dr.background = canvas.copy_from_bbox(dr.rect.axes.bbox)
                         dr.rect.set_color(self.colors['selected'])
@@ -430,7 +406,7 @@ class Plot:
                     return
             txt_box.set_val('')
 
-    def _deselect_all(self,event):
+    def _deselect_all(self):
         print("Resetting plot...")
         for dr in self.drs:
             dr.color = dr.original_color
@@ -446,6 +422,7 @@ class Plot:
         print('Number of solvents chosen: ' + str(len(self.selected_solvents)))
         filename = 'solvated_structure-' + str(len(self.selected_solvents)) + '.pdb'
         print('Your microsolvated structure is written to: ' + filename)
+
         # does not open GUI, but saves plot of selected bars
         barcolors = self._determine_colors(solute, solvent)
         for select in self.selected_solvents:
@@ -455,26 +432,28 @@ class Plot:
         # writes latest solvated structure to file to open with pymol
         with open("latest-solvation.log", "a") as latest:
             latest.write(filename + '\n')
-        # writes file with solute and selected solvents
-        write_pdb(filename, solute, abb, solute=True) #writes only the solute into the pdb-file LM20231123
-        selected_solvent = Solvent() #info: this object finally contains all element labels, coords and values of all selected solvents. LM20231130
 
-        for select in self.selected_solvents: #TODO: Check if selected_solvents order coincides with order of solvent.coord entries, i.e. are solvent.coord entries sorted wrt their energy
-            voxel = int(solvent.data[select][0]) #new LM20231123. LM20231130: type conversion from str to int. TODO: Type conversion prone to ValueError
-            quats = solvent.quats[voxel] #new LM20231123
-            grid_point = (float(solvent.data[select][1]), float(solvent.data[select][2]), float(solvent.data[select][3])) #new LM20231123. LM20231130: conversion from str to int. TODO: Prone to ValueError.
-            elements, coords = reference._find_avg_solvent(voxel, quats, grid_point, verbose=False) #new LM20231123. This finally determines the solvent to be placed.
-            values = float(solvent.data[select][-1]) #new LM20231124. #LM20231130 conversion from str to float
-            selected_solvent.elements.extend(elements) #changed from append which does not work since elements is a list itself. LM20231130
-            selected_solvent.coords.extend(coords) #changed from select * 3 in brackets LM20231123. #changed from append which does not work since elements is a list itself. LM20231130
-            #selected_solvent.atoms.append(solvent.atoms[select * 3 + 1]) #not needed since only the com coordinate is considered LM20231123
-            #selected_solvent.atoms.append(solvent.atoms[select * 3 + 2])
-            selected_solvent.values.extend([values]*len(elements)) #changed from select * 3 in brackets LM20231123 #needs as many entries as there are elements in the solvent. Therefore changed from append(values) to extend([values]*len(elements))
-            #selected_solvent.values.append(solvent.all_values[select * 3 + 1]) #not needed since only the com coordinate is considered LM20231123
-            #selected_solvent.values.append(solvent.all_values[select * 3 + 2]) #not needed since only the com coordinate is considered LM20231123
-            #selected_solvent.elements.append('O') #not needed LM20231123
-            #selected_solvent.elements.append('H') #not needed LM20231123
-            #selected_solvent.elements.append('H') #not needed LM20231123
+        # writes file with solute and selected solvents
+        write_pdb(filename, solute, abb, solute=True) #writes only the solute into the pdb-file
+
+        # info: this object finally contains all element labels, coords and values of all selected solvents.
+        selected_solvent = Solvent()
+
+        # TODO: Check if selected_solvents order coincides with order of solvent.coord entries,
+        #  i.e. are solvent.coord entries sorted wrt their energy
+        for select in self.selected_solvents:
+            voxel = int(solvent.data[select][0]) #TODO: Type conversion prone to ValueError
+            quats = solvent.quats[voxel]
+            grid_point = (float(solvent.data[select][1]),
+                          float(solvent.data[select][2]),
+                          float(solvent.data[select][3])) #TODO: Prone to ValueError.
+
+            #This finally determines the solvent to be placed.
+            elements, coords = reference._find_avg_solvent(voxel, quats, grid_point, verbose=False)
+            values = float(solvent.data[select][-1])
+            selected_solvent.elements.extend(elements)
+            selected_solvent.coords.extend(coords)
+            selected_solvent.values.extend([values]*len(elements))
 
         write_pdb(filename, selected_solvent, abb, solute=False)
         return filename
@@ -504,6 +483,7 @@ class ClickableBar:
         x0, y0 = self.rect.xy
         self.press = x0, y0, event.xdata, event.ydata
         ClickableBar.lock = self
+
         # draw everything but the selected rectangle and store the pixel buffer
         canvas = self.rect.figure.canvas
         axes = self.rect.axes
@@ -519,6 +499,7 @@ class ClickableBar:
             self.plot.selected_solvents.remove(index)
             self.rect.set_color(self.original_color)
             self.color = self.original_color
+
         else:
             print('solvent selected:', int(np.round(event.xdata)))
             self.plot.selected_solvents.append(index)

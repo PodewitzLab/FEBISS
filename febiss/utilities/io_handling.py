@@ -2,44 +2,13 @@
 # -*- coding: utf-8 -*-
 __copyright__ = """
 This code is licensed under the MIT license.
-Copyright University Innsbruck, Institute for General, Inorganic, and Theoretical Chemistry, Podewitz Group
+Copyright Technische Universität Wien, Institute of Materials Chemistry, Podewitz Group
 See LICENSE for details
 """
 
 from typing import Union
-import numpy as np
-import os
 
-from ..utilities.structures import Solute, Solvent, Reference
-
-
-# def read_pdb(pdb, solute: Solute, solvent: Reference):
-#     with open(pdb, 'r') as f:
-#         for line in f:
-#             if 'HETATM' in line:
-#                 row = line.split()
-#                 solvent.elements.append(row[-1])
-#                 solvent.atoms.append(np.array([float(r) for r in row[-6:-3]]))
-#                 if row[2] == solvent.rigid_atom_idx_0: #Changed from row[-1] (which contains the ambiguous element name) to row[2] which contains the atom label. TODO: Update pdb file generation in CPPTRAJ
-#                     solvent.values.append(-1 * float(row[-2]))
-#                     for i in range(solvent.size): #adds the tempfactor/energy value for each solvent atom
-#                         solvent.all_values.append(-1 * float(row[-2]))
-#
-#                 #elif row[-1] != 'H':
-#                 #    raise NotImplementedError("ERROR: NON-solvent HETATM present in pdb file")
-#             elif 'ATOM' in line:
-#                 row = line.split()
-#                 solute.elements.append(row[-1])
-#                 solute.atoms.append(np.array([float(r) for r in row[-6:-3]]))
-#                 solute.values.append(0.0)
-#
-#     solute.atoms = np.asarray(solute.atoms)
-#     solute.determine_polar_hydrogen_and_non_hydrogen()
-#     solvent.atoms = np.asarray(solvent.atoms)
-#     solvent.sort_by_value()
-
-# def read_febiss_file(febiss_file : str, )
-
+from ..utilities.structures import Solute, Solvent
 
 def write_pdb(pdb: str, structure: Union[Solute, Solvent], abb, solute: bool = False):
     if solute:
@@ -48,9 +17,8 @@ def write_pdb(pdb: str, structure: Union[Solute, Solvent], abb, solute: bool = F
     else:
         atomcounter = len(open(pdb, 'r').readlines()) + 1
         f = open(pdb, 'a')
-        #print(structure.elements)
-        #print(structure.coords)
-    for count, (ele, atom) in enumerate(zip(structure.elements, structure.coords)): #changed from structure.atoms LM20231130
+
+    for count, (ele, atom) in enumerate(zip(structure.elements, structure.coords)):
         j = []
         if solute:
             j.append('ATOM'.ljust(6))  # atom#6s
@@ -71,10 +39,9 @@ def write_pdb(pdb: str, structure: Union[Solute, Solvent], abb, solute: bool = F
         j.append(str('%8.3f' % (float(atom[1]))).rjust(8))  # y
         j.append(str('%8.3f' % (float(atom[2]))).rjust(8))  # z
         j.append(str('%6.2f' % 1.0).rjust(6))  # occ
-        if solute: #new LM20231130: introduced since solute does not have an attribute "values" anymore
+        if solute:
             value = 0.0
         else:
-            #print(structure.values[count])
             value = float(structure.values[count])
         if value == 0.0:
             j.append(str('%7.2f' % value).ljust(7))  # delta G

@@ -255,7 +255,7 @@ def new_coord_gen(mol:Molecule, q:quat.quaternion,t: np.ndarray = np.array([0,0,
     Calculates the new coordinates after rotation of mol by q using the formula:
     [0,x'] = q * [0,x] * q^(-1)
 
-    NEW LM20231124: Created possibility for translation of molecules after rotation with vector t. For the addition of
+    Created possibility for translation of molecules after rotation with vector t. For the addition of
     translation vector the vec_part first has to be transformed into np.ndarray. For usage with structure_randomizer.write(),
     the np.ndarray is transformed back to a list (probably not needed, though).
 

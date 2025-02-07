@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 __copyright__ = """
 This code is licensed under the MIT license.
-Copyright University Innsbruck, Institute for General, Inorganic, and Theoretical Chemistry, Podewitz Group
+Copyright Technische Universität Wien, Institute of Materials Chemistry, Podewitz Group
 See LICENSE for details
 """
 
@@ -62,7 +62,7 @@ NAME_DICT = {
     "TP3" : "TIP3P Water"
 }
 
-RIGID_ATOMS_DICT = { #LM20231207: added -1 on every index since the first atom has an index of 0
+RIGID_ATOMS_DICT = {
     "ACN": (3, 1, 0),  # H1-C-C
     "ACT": (9, 1, 0),  # O-C-C
     "BNZ": (0, 1, 2),  # C-C-C

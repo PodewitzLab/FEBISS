@@ -2,17 +2,16 @@
 # -*- coding: utf-8 -*-
 __copyright__ = """
 This code is licensed under the MIT license.
-Copyright University Innsbruck, Institute for General, Inorganic, and Theoretical Chemistry, Podewitz Group
+Copyright Technische Universität Wien, Institute of Materials Chemistry, Podewitz Group
 See LICENSE for details
 """
 
 import os
-import stat
 import subprocess
 import sys
 import yaml
 
-from febiss import SETTINGS_FILE, SETTINGS
+from febiss import SETTINGS_FILE
 
 default = {'installation_path': '~/.dependencies_febiss', 'openmp': True, 'cuda': True, 'singularity' : False}
 
@@ -33,11 +32,15 @@ def help_message():
 def main():
     if len(sys.argv) != 2:
         help_message()
+
     arg = sys.argv[1]
+
     if arg.lower() in ['-h', '--help']:
         help_message()
+
     if arg == 'default':
         param = default
+
     else:
         # get settings from yamlfile given as command line argument
         if not os.path.exists(arg):
@@ -45,43 +48,54 @@ def main():
         with open(arg, 'r') as yamlfile:
             param = yaml.safe_load(yamlfile.read().replace("\t", "  ").replace("    ", "  "))
     cwd = os.getcwd()
+
     # install dependencies
     inst_path = param["installation_path"]
     if '~' in inst_path:
         inst_path = os.path.expanduser(inst_path)
+
     # Create target directory if don't exist
     if not os.path.exists(inst_path):
         os.mkdir(inst_path)
     os.chdir(inst_path)
+
     if param['singularity'] == False:
         subprocess.call(['git', 'clone', 'https://github.com/maberl1/cpptraj.git'])
+
         # change CPPTRAJ to working version
         os.chdir('cpptraj')
+
         # # save directories for rc file
         cpptraj_home = os.path.join(inst_path, 'cpptraj')
         os.chdir(os.path.join(inst_path, 'cpptraj'))
+
         # build command for configure of cpptraj and binary name based on given yaml
-        configure = ['yes | bash ./configure'] #yes command downloads and installs fftw3. LM&RT20231214.
+        configure = ['yes | bash ./configure'] #yes command downloads and installs fftw3
         bin_string = 'cpptraj'
+
         # dict.get returns None if not present, otherwise value
         if param.get('openmp'):
             configure.append("-openmp")
             bin_string += '.OMP'
+
         if param.get('cuda'):
             configure.append("-cuda")
             bin_string += '.cuda'
         configure.append("gnu")
+
         # install cpptraj
-        subprocess.run(" ".join(configure), shell=True) #changed from subprocess.call. LM&RT20231214
+        subprocess.run(" ".join(configure), shell=True)
         try:
             n_cores = os.environ['OMP_NUM_THREADS']
             subprocess.call(['make', '-j', str(n_cores)])
         except KeyError:
             subprocess.call(['make'])
+
         cpptraj_home = {'CPPTRAJ_BIN':os.path.join(cpptraj_home, 'bin', bin_string)}
         if not os.path.exists(cpptraj_home['CPPTRAJ_BIN']):
             raise FileNotFoundError('ERROR, the binary ' + bin_string + ' does not exist, check ' +
                                     cpptraj_home['CPPTRAJ_BIN'] + ' or output above for possible reasons')
+
         # save settings in rc file in home
         if os.path.exists(SETTINGS_FILE):
             print('WARNING: Overwriting existing rc file.')
@@ -95,14 +109,18 @@ def main():
                     sys.exit()
                 else:
                     print("Sorry wrong input, just 'y' or 'n'.")
+
         with open(SETTINGS_FILE, 'w') as outfile:
             yaml.dump(cpptraj_home, outfile, default_flow_style=False, allow_unicode=True)
+
         # move back to previous working directory
         os.chdir(cwd)
         print('\nInstallation successful, these are the saved settings:')
         print(open(SETTINGS_FILE, 'r').read())
+
     elif param['singularity'] == True:
         print('Not yet implemented!')
+
     else:
         raise TypeError('Please check your yaml-file. Parameter "singularity" only takes "True" or "False"')
 

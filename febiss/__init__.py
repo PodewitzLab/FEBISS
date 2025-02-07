@@ -22,13 +22,14 @@ def _load_febiss_settings() -> Dict[str, str]:
     try:
         with open(SETTINGS_FILE, "rt") as f:
             d = yaml.safe_load(f)
+
     except IOError:
-        # If there are any errors, default to using environment variables
-        # if present.
+        # If there are any errors, default to using environment variables if present.
         d = {}
         for k, v in os.environ.items():
-            if k in ['CPPTRAJ_BIN', 'CPPTRAJ_HOME', 'FEBISS_HOME']: #deleted GIGIST_HOME LM20231214
+            if k in ['CPPTRAJ_BIN', 'CPPTRAJ_HOME', 'FEBISS_HOME']:
                 d[k] = v
+
     return dict(d)
 
 

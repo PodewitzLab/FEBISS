@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 __copyright__ = """
 This code is licensed under the MIT license.
-Copyright University Innsbruck, Institute for General, Inorganic, and Theoretical Chemistry, Podewitz Group
+Copyright Technische Universität Wien, Institute of Materials Chemistry, Podewitz Group
 See LICENSE for details
 """
 
@@ -32,8 +32,10 @@ class ButtonActions(object):
         for existing, (symbol, name) in zip(display.existing_elements, display.rdf_names.items()):
             if existing:
                 count += 1
+
                 if os.path.exists('rdf-' + str(name) + '.dat'):
                     arr = np.loadtxt("rdf-" + str(name) + ".dat")
+
                 else:
                     print("ERROR: RDF analysis for " + str(name) + " was not performed in this directory!")
                     ax = self.fig.add_subplot(rows, cols, count)

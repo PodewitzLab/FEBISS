@@ -5,13 +5,16 @@ def converter(path,abb):
         stop = "@<TRIPOS>BOND"
         path_mol2 = path+"/{0}.mol2".format(abb)
         path_xyz = path+"/{0}.xyz".format(abb)
+
         with open(path_mol2,'r') as mol2file:
             lines = mol2file.readlines()
             start_idx = 0
             stop_idx = 0
+
             for j in range(len(lines)):
                 if lines[j].strip()==start:
                     start_idx = j
+
                 elif lines[j].strip()==stop:
                     stop_idx = j
                     break
@@ -19,6 +22,7 @@ def converter(path,abb):
             xyz_lines = []
             xyz_lines.append("{0}\n".format(lines[stop_idx-1].split()[0]))
             xyz_lines.append("{0}\n".format(lines[1].strip()))
+
             for k in range(start_idx+1,stop_idx):
                 parts = lines[k].split()
                 parts[1] = parts[1].strip("0123456789")
