@@ -52,6 +52,37 @@ def write_pdb(pdb: str, structure: Union[Solute, Solvent], abb, solute: bool = F
             j[0], j[1], j[2], j[3], j[4], j[5], j[6], j[7], j[8], j[9], j[10], j[11]))
     f.close()
 
+def write_xyz(ori_path, return_path, new_coords, idx=0, labels = None):
+    """
+    :param ori_path: ori_path: path of the original xyz file that acts as a template
+    :param return_path: path of the files to be created. accepts one placeholder {0} for an index that goes from 0 to num
+    :param new_coords: newly created coordinates after rotation, translation, ...
+    :param idx: Optional. Used for numbering the created xyz-files
+    :param labels: Optional. If labels of atoms are already known they can be passed as list. Otherwise this function
+           will determine them from the xyz file using the pymatgen.core package "Molecule".
+    :return path of written file
+
+
+    Takes an xyz-file (ori_path) as template to create an xyz-file (return_path) with the new_coords. Return_path
+    accepts a placeholder {0} for numbering with idx (default: 0).
+    """
+
+    if labels is None:
+        from pymatgen.core import Molecule
+        mol = Molecule.from_file(ori_path)
+        labels = mol.labels
+
+    xyzlines = []
+    text = open(ori_path, 'r').readlines()
+    xyzlines.extend([text[0], text[1]])
+    for k in range(len(new_coords)):
+        line = "{0:<2} {1:>12}{2:>12}{3:>12}\n".format(labels[k], round(new_coords[k][0], 5),
+                                                       round(new_coords[k][1], 5), round(new_coords[k][2], 5))
+        xyzlines.append(line)
+    with open(return_path.format(idx),'w') as newfile:
+        newfile.writelines(xyzlines)
+
+    return return_path.format(idx)
 
 def write_style_file() -> str:
     filename = 'style.pml'

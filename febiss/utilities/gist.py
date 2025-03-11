@@ -11,7 +11,6 @@ import glob
 import os
 import subprocess
 from .io_handling import Input
-from ..utilities.write_solute_pdb import write_solute_pdb
 from ..solvents import CASE_DICT
 
 from febiss import SETTINGS
@@ -82,7 +81,7 @@ class GistAnalyser:
             self.__dict__['rigid_atom_0'] = -1
 
     def perform_solute_write_out(self):
-        solute_in = write_solute_pdb(self.top, self.trajectory_file, self.solv_abb)
+        solute_in = self._write_solute_pdb(self.top, self.trajectory_file, self.solv_abb)
         self._execute_cpptraj(solute_in)
         if not os.path.exists('solute.pdb'):
             raise UnsuccessfulAnalysisException(
@@ -270,3 +269,21 @@ class GistAnalyser:
             for line in gist_data[2:]:
                 row = line.split()
                 f.write('H\t' + row[1] + '\t' + row[2] + '\t' + row[3] + '\n') #TODO: Needs to be reworked.
+
+    def _write_solute_pdb(self, top : str, trajin : str, abb : str) -> str: #trajin is passed as trajin+format
+        file_in = "solute.in" #a pdb file is not created here but only a .in file for cpptraj
+        file_out = "solute.pdb"
+        if os.path.isfile(file_out):
+            if not Input("\n\nDo you want to overwrite solute.pdb in your directory?").yn():
+                file_out = input("\n\nPlease provide a name for the solute pdb file "
+                                 "('.pdb' is automatically appended to your input):\n")
+
+        with open(file_in, 'w') as f:
+            f.write('parm ' + top + '\n')
+            f.write('trajin ' + trajin + '\n')
+            f.write('strip :' + abb + '\n')
+            f.write('trajout ' + file_out + ' onlyframes 1\n')
+            f.write('run\n')
+            f.write('quit\n')
+
+        return file_in

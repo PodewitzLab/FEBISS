@@ -19,7 +19,6 @@ import numpy as np
 import sys
 
 from ..utilities.structures import Solute, Solvent, Reference
-from ..utilities.distance_functions import distance_squared
 from ..utilities.io_handling import write_pdb
 from .rdf import ButtonActions
 
@@ -55,6 +54,9 @@ class Plot:
         self._interactive_reselection(solute, solvent)
         filename = self._save_selection(abb, solute, solvent, reference)
         return filename
+
+    def _distance_squared(self, a_array, b_array) -> float:
+        return sum(((a - b) ** 2 for a, b in zip(a_array, b_array)))
 
     def _set_defaults(self):
         # default values for bar chart
@@ -106,10 +108,10 @@ class Plot:
         for count, sol in enumerate(solvent.coords):
 
             for atom in solute.coords:
-                if distance_squared(atom, sol) < squared_cutoff1:
+                if self._distance_squared(atom, sol) < squared_cutoff1:
                     within_cutoff.append(count)
                     break  #close enough solute atom was found for solvent within cutoff -> break loop over solute atoms
-                elif distance_squared(atom, sol) > squared_cutoff2:
+                elif self._distance_squared(atom, sol) > squared_cutoff2:
                     outside_cutoff2.append(count)
                 else:
                     between_cutoffs.append(count)

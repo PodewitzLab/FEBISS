@@ -9,7 +9,7 @@ See LICENSE for details
 import os
 import typing
 from ..utilities.mol2_to_xyz import converter
-from ..utilities.structure_randomizer import write_xyz as write
+from ..utilities.io_handling import write_xyz as write
 from ..utilities.quat_handling import *
 from pymatgen.core import Molecule
 from pymatgen.symmetry import analyzer as ana
