@@ -1,0 +1,13 @@
+#adopted from https://github.com/PodewitzLab/PyConSolv/blob/8a61c19bf25d36f634815272dc0727904a6803ff/src/PyConSolv/utils/colorgen.py (March 20, 2025)
+
+class Color:
+    PURPLE = '\033[1;35;48m'
+    CYAN = '\033[1;36;48m'
+    BOLD = '\033[1;37;48m'
+    BLUE = '\033[1;34;48m'
+    GREEN = '\033[1;32;48m'
+    YELLOW = '\033[1;33;48m'
+    RED = '\033[1;31;48m'
+    BLACK = '\033[1;30;48m'
+    UNDERLINE = '\033[4;37;48m'
+    END = '\033[1;37;0m'

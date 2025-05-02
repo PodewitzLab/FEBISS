@@ -11,7 +11,6 @@ from matplotlib.ticker import FormatStrFormatter
 from matplotlib.widgets import Button
 from matplotlib.widgets import TextBox
 from typing import List
-from warnings import warn
 import matplotlib
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
@@ -19,38 +18,83 @@ import numpy as np
 import sys
 
 from ..utilities.structures import Solute, Solvent, Reference
-from ..utilities.io_handling import write_pdb
+from ..utilities.io_handling.write_pdb import write_pdb
+from ..utilities.io_handling.settings_checker import Checker
+from ..utilities.io_handling.input import Input
 from .rdf import ButtonActions
 
 
-class Plot:
+class Plot(Checker):
     def __init__(self, **kwargs):
+        Checker.__init__(self)
         self._set_defaults()
-        self.allowed_keys = {'cutoff1', 'cutoff2', 'displayed_solvents', 'colors', 'width', 'height', 'dpi', 'xlabel',
-                             'ylabel', 'selected_plotname', 'plotname', 'orientation', 'fontsize', 'number_xtics',
-                             'y_numbers', 'marks', 'transparent', 'display_once', 'testing', 'febiss_file', 'rdf_names',
-                             'solvent_selection'}
-        self.__dict__.update((k, v) for k, v in kwargs.items() if k in self.allowed_keys)
-        for key in kwargs.keys():
-            if key not in self.allowed_keys:
-                warn('WARNING: Did not recognize key: ' + str(key))
+        self.allowed_keys = OrderedDict({
+            'cutoff1': ('type', 'float'),
+            'cutoff2': ('type', 'float'),
+            'displayed_solvents': ('format', '[0-9]+|(?i)all'),
+            'within': ('format', '#[a-fA-F0-9]{6}'),
+            'between': ('format', '#[a-fA-F0-9]{6}'),
+            'outside': ('format', '#[a-fA-F0-9]{6}'),
+            'selected': ('format', '#[a-fA-F0-9]{6}'),
+            'mark': ('format', '#[a-fA-F0-9]{6}'),
+            'width': ('type', 'int'),
+            'height': ('type', 'int'),
+            'dpi': ('type', 'int'),
+            'xlabel': ('type', 'str'),
+            'ylabel': ('type', 'str'),
+            'selected_plotname': ('format', '[a-zA-Z0-9\._\-]+.png'),
+            'plotname': ('format', '[a-zA-Z0-9\._\-]+.png'),
+            'orientation':('format', '(?i)landscape|portrait'),
+            'fontsize': ('type', 'int'),
+            'number_xtics': ('type', 'int'),
+            'y_numbers': ('type', 'float'),
+            #'marks': ('format', '\[[0-9]+.[0-9]+\]|\['),
+            'transparent': ('type', 'bool'),
+            'solvent_selection': ('format', '[0-9,\- ]*|(?i)None'),
+            'rdf_name_center2': ('type', 'str'),
+            'rdf_name_carbon': ('type', 'str'),
+            'rdf_name_oxygen': ('type', 'str'),
+            'rdf_name_nitrogen': ('type', 'str'),
+            'rdf_name_phosphorus': ('type', 'str')
+        })
+
+        # Update attributes
+        for k, v in kwargs.items():
+            if k in self.allowed_keys.keys():
+                if k == 'displayed_solvents':
+                    if type(v) == str: # if 'all' is given
+                        self.__dict__[k] = str(v).lower() # To account for misspelled "all"
+                    else:
+                        self.__dict__[k] = v
+                elif k in ['within', 'between', 'outside', 'selected', 'mark']:
+                    self.__dict__[k] = '#' + str(v) # places hashtag in front of color hex codes. yaml can't read '#'.
+                                                    # conversion into str is necessary, since colors can appear as ints
+                elif k == 'solvent_selection':
+                    self.__dict__[k] = str(v) # converts the input into string
+                else:
+                    self.__dict__[k] = v
+            else:
+                print('WARNING: Did not recognize key: ' + str(k))
+
+        # Set up auxiliary dictionary
+        self._rdf_names = {'center2': self.rdf_name_center2,
+                          'C': self.rdf_name_carbon,
+                          'O': self.rdf_name_oxygen,
+                          'N': self.rdf_name_nitrogen,
+                          'P': self.rdf_name_phosphorus}
 
     def gui(self, abb, solute: Solute, solvent: Solvent, reference: Reference) -> str:
-        if not self.testing and not self.solvent_selection:
+        if self.solvent_selection is not None:
             self._determine_hetero_elements(solute)
             barcolors = self._determine_colors(solute, solvent)
             self._create_plot(barcolors, solvent, False)
-        elif not self.testing and self.solvent_selection:
-            self._input_selection(self.solvent_selection)
         else:
-            self.selected_solvents = [0, 1, 2, 3, 4]
+            self._input_selection(self.solvent_selection)
 
-        if self.display_once:
-            sys.exit()
 
         # avoid bug of selecting out of range solvent
-        if -1 in self.selected_solvents:
-            self.selected_solvents.remove(-1)
+        if -1 in self._selected_solvents:
+            self._selected_solvents.remove(-1)
         self._interactive_reselection(solute, solvent)
         filename = self._save_selection(abb, solute, solvent, reference)
         return filename
@@ -60,12 +104,16 @@ class Plot:
 
     def _set_defaults(self):
         # default values for bar chart
-        self.selected_solvents = [] #get written in class ClickableBar
+
+        # allowed
         self.cutoff1 = 3.0 #distance between solute and solvent
         self.cutoff2 = 6.0 #distance between solute and solvent
-        self.displayed_solvents = 50
-        self.colors = {'within': '#fdb462', 'between': '#80b1d3', 'outside': '#de2d26', 'selected': '#b3de69',
-                       'mark': '#bc80bd'}
+        self.displayed_solvents = 30
+        self.within = 'fdb462'
+        self.between = '80b1d3'
+        self.outside = 'de2d26'
+        self.selected = 'b3de69'
+        self.mark = 'bc80bd'
         self.width = 16
         self.height = 8
         self.dpi = 200
@@ -77,18 +125,58 @@ class Plot:
         self.fontsize = 18
         self.number_xtics = 10
         self.y_numbers = 0.25
-        self.marks = []
         self.febiss_file = 'febiss.dat'
-        self.rdf_names = {'center2': 'center of solute', 'C': 'carbon', 'O': 'oxygen', 'N': 'nitrogen', 'P': 'phosphor'}
+        #self.marks = str([])
         self.transparent = True
-        self.display_once = False
-        self.testing = False
-        self.solvent_selection = False
-        self.drs = []
+        self.solvent_selection = None
+        self.rdf_name_center2 = 'Center'
+        self.rdf_name_carbon = 'Carbon'
+        self.rdf_name_oxygen = 'Oxygen'
+        self.rdf_name_nitrogen = 'Nitrogen'
+        self.rdf_name_phosphorus = 'Phosphorus'
+
+        #hidden
+        self._selected_solvents = []
+        self._drs = []
+        self._rdf_names = {} # Will be updated after initializing allowed_keys
+
+
+    def sanity_checks(self, gui = False):
+
+        if gui:
+            for k in ['within', 'between', 'outside', 'selected', 'mark']:
+                self.allowed_keys[k] = ('format', '[a-fA-F0-9]{6}')
+
+        for key, val in self.allowed_keys.items():
+            if val[0] == 'path':
+                if self.check_path(self.__dict__[key]):
+                    continue
+
+                else:
+                    self.err_string += '\n\t-{0}. Path not found'.format(key)
+
+            elif val[0] == 'type':
+                if self.check_type(self.__dict__[key], eval(val[1])):
+                    continue
+
+                else:
+                    self.err_string += '\n\t-{0}. Required type: {1}'.format(key, val[1])
+
+            elif val[0] == 'format':
+                if self.check_format(str(self.__dict__[key]), val[1]): # Conversion of __dict__[key] to string as required by check_format
+                    continue
+
+                else:
+                    self.err_string += '\n\t-{0}. Required format: {1}'.format(key, val[1])
+
+            else:
+                print("You've just discovered a bug (required formats). Please reach out to us!")
+                sys.exit()
+
 
     def _determine_hetero_elements(self, solute: Solute):
         self.existing_elements = []
-        for symbol in self.rdf_names.keys():
+        for symbol in self._rdf_names.keys():
             if symbol in solute.elements:
                 self.existing_elements.append(True)
             elif symbol == 'center2':
@@ -141,11 +229,11 @@ class Plot:
                     outside_cutoff2.remove(outside)
 
         """ set colors """
-        barcolors = [self.colors['outside']] * len(solvent.coords)
+        barcolors = [self.outside] * len(solvent.coords)
         for within in within_cutoff:
-                barcolors[within] = self.colors['within']
+                barcolors[within] = self.within
         for outside in between_cutoffs:
-                barcolors[outside] = self.colors['between']
+                barcolors[outside] = self.between
 
         return barcolors
 
@@ -156,13 +244,13 @@ class Plot:
         return {'size': str(self.fontsize)}
 
     def _create_legend(self, ax: plt.Axes, save_selected: bool):
-        within = mpatches.Patch(color=self.colors['within'], label=u'd(solute-solvent) < %.1f Å' % self.cutoff1)
-        between = mpatches.Patch(color=self.colors['between'],
+        within = mpatches.Patch(color=self.within, label=u'd(solute-solvent) < %.1f Å' % self.cutoff1)
+        between = mpatches.Patch(color=self.between,
                                  label=u'%.1f ≤ d(solute-solvent) ≤ %.1f Å' % (self.cutoff1, self.cutoff2))
-        outside = mpatches.Patch(color=self.colors['outside'], label=u'd(solute-solvent) > %.1f Å' % self.cutoff2)
+        outside = mpatches.Patch(color=self.outside, label=u'd(solute-solvent) > %.1f Å' % self.cutoff2)
         if save_selected:
             # add green bars in legend
-            selected = mpatches.Patch(color=self.colors['selected'], label='selected solvent molecules')
+            selected = mpatches.Patch(color=self.selected, label='selected solvent molecules')
             ax.legend(handles=[within, between, outside, selected], prop=self._axis_font())
         else:
             ax.legend(handles=[within, between, outside], prop=self._axis_font())
@@ -178,8 +266,8 @@ class Plot:
         # make bars interactive
         for rect, color in zip(rects, barcolors):
             dr = ClickableBar(rect, color, self)
-            self.drs.append(dr)
-        self.original_drs = self.drs
+            self._drs.append(dr)
+        self.original_drs = self._drs
 
         # font specifications
         matplotlib.rcParams.update({'font.size': self.fontsize})
@@ -191,8 +279,8 @@ class Plot:
             ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
 
         # Additional plotting option for vertical lines to show cutoffs
-        for x in self.marks:
-            plt.axvline(x=x, color=self.colors['mark'], linestyle='--', lw=4)
+        #for x in self.marks:
+        #    plt.axvline(x=x, color=self.mark, linestyle='--', lw=4)
 
         # label specifications
         plt.xlabel(self.xlabel, **self._axis_font())
@@ -270,7 +358,7 @@ class Plot:
             # specify clear all
             c = plt.axes((0.5, 0.9, 0.1, 0.075))
             button_c = Button(c, "Clear all", color="0.85", hovercolor="0.95")  # set text and color
-            button_c.on_clicked(self._deselect_all)
+            button_c.on_clicked(lambda _: self._deselect_all())
 
             plt.show()
 
@@ -284,10 +372,9 @@ class Plot:
         # allows for changing distance bounds and displayed solvent number
         selected = False
         while not selected:
-            if not self.selected_solvents:
+            if not self._selected_solvents:
                 print("No solvents selected")
-                inp = input("Do you want to change/set the cutoff value? [y/n] ")
-                if inp in ['y', 'Y', 'yes', 'Yes', ' y']:
+                if Input("Do you want to change/set the cutoff value? [y/n] ").yn():
                     if old_displayed_solvents == "all":
                         print("Please enter the new values (previous distance cutoffs were {0:.2f} and {1:.2f} and "
                               "all solvent molecules were shown)".format(old_cutoff1, old_cutoff2))
@@ -299,36 +386,31 @@ class Plot:
                     # ensures that user enters correct data type
                     selected_cutoff = False
                     while not selected_cutoff:
-                        try:
-                            self.cutoff1 = float(input("Choose first distance cutoff: "))
-                            old_cutoff1 = self.cutoff1
-                            selected_cutoff = True
-                        except ValueError:
-                            self.cutoff1 = float(input("Please enter a number: "))
+                        self.cutoff1 = Input("Choose first distance cutoff: ", type=float).input
+                        old_cutoff1 = self.cutoff1
+                        selected_cutoff = True
+
                     # ensures that user enters correct data type
                     selected_cutoff = False
                     while not selected_cutoff:
-                        try:
-                            self.cutoff2 = float(input("Choose second distance cutoff: "))
-                            old_cutoff2 = self.cutoff2
-                            selected_cutoff = True
-                        except ValueError:
-                            self.cutoff2 = float(input("Please enter a number: "))
+                        self.cutoff2 = Input("Choose second distance cutoff: ", type=float).input
+                        old_cutoff2 = self.cutoff2
+                        selected_cutoff = True
 
-                    inp = input("Choose maximum number of solvent molecules displayed: ")
+                    inp = Input("Choose maximum number of solvent molecules displayed: ")
                     # user can enter 'all' or number -> first check all before ensuring datatype int
                     selected_solvent_number = False
                     while not selected_solvent_number:
-                        if inp in ["all", "All", "ALL"]:
+                        if inp.input.lower() == 'all':
                             self.displayed_solvents = 'all'
                             old_displayed_solvents = 'all'
                             selected_solvent_number = True
                         else:
                             try:
-                                self.displayed_solvents = int(inp)
+                                self.displayed_solvents = int(inp.input)
                                 selected_solvent_number = True
                             except ValueError:
-                                inp = input("Please enter a number or 'all': ")
+                                inp = Input("Please enter a number or 'all': ")
 
                     # user wants crazy number or is unaware of 'all' function --> print all
                     if self.displayed_solvents > len(solvent.values):
@@ -344,91 +426,90 @@ class Plot:
                     else:
                         old_displayed_solvents = self.displayed_solvents
 
-                    # redetermine colors because of new distance bounds
+                    # redetermine _colors because of new distance bounds
                     barcolors = self._determine_colors(solute, solvent)
                     # display GUI again
                     self._create_plot(barcolors, solvent, False)
-                elif inp in ['n', 'N', 'no', 'No', ' n']:
+                else:
                     print("No solvents selected")
                     sys.exit()
-                else:
-                    print("Wrong input, just 'y' or 'n'.")
             else:  # solvent were selected, reselection of parameters are not necessary
                 selected = True
 
-    def _input_selection(self,text : str): #ids separated with ",". allows ranges with "-"
+    def _input_selection(self, text: str = None):  # ids separated with ",". allows ranges with "-"
         # this in connection with set_val('') prevents the double submission of the textbox when clicking on a bar after
         # input selection. fyi: on_submit gets triggered with enter and with leaving the textbox
-        if len(text) == 0:
+        if len(text) == 0:  # no input given
             return
-        split = text.split(",")
-        rm_list = []
-        for i in range(len(split)):
-            split[i] = split[i].split("-")
-            if len(split[i]) == 1:
-                try:
-                    split[i] = int(split[i][0])
+
+        split_1 = text.split(",")
+        sel_solv = [] # contains selected solvents
+
+        for i in range(len(split_1)):
+            split_2 = split_1[i].split("-")
+            if len(split_2) == 1:  # split[i] is not a range
+                try:  # try str-int conversion
+                    sel_solv.append(int(split_2[0]))
                 except ValueError:
-                    print("A non-integer was given. Please re-enter your selection!")
+                    print("Invalid input. Please re-enter your selection!")
                     return
-            else:
-                rm_list.append(split[i])
-                for j in range(len(split[i])):
-                    try:
-                        split[i][j] = int(split[i][j])
+            else:  # range was given. also takes care of weird ranges like 1-3-5 and 5-1, which are treated as 1-5
+                range_list = []
+                for j in range(len(split_2)):
+                    try:  # try str-int conversion
+                        range_list.append(int(split_2[j]))
                     except ValueError:
-                        print("A range containing a non-integer was given. Please re-enter your selection!")
+                        print("A range containing an invalid input was given. Please re-enter your selection!")
                         return
-                a = sorted(split[i])
+                a = sorted(range_list)
+
                 for k in range(a[0], a[-1] + 1):
-                    split.append(k)
+                    sel_solv.append(k)
 
-        for r in rm_list:
-            split.remove(r)
-        split = [x for x in split if x in range(1,self.displayed_solvents+1)]
-        out = ','.join((str(x) for x in sorted(set(split))))
-        print("Selected solvents: {0}".format(out))
+        sel_solv = [x for x in sel_solv if (1 <= x <= self.displayed_solvents)]
+        out = ','.join((str(x) for x in sorted(set(sel_solv))))
+        print("Solvent selected: {0}".format(out))
 
-        self.selected_solvents = sorted(set([x-1 for x in split]))  # overrules all previously clicked solvents
+        self._selected_solvents.extend(sorted(set([x - 1 for x in sel_solv])))
 
-        if len(self.drs) != 0: #that is the case when there is no barplot due to predefined solvent selection
-            for dr in self.drs:
+        if len(self._drs) != 0: #that is the case when there is no barplot due to predefined solvent selection
+            for dr in self._drs:
                 try:
-                    if int(dr.rect.xy[0]) in self.selected_solvents:
-                        dr.color = self.colors['selected']
+                    if int(dr.rect.xy[0]) in self._selected_solvents:
+                        dr.color = self.selected
                         canvas = dr.rect.figure.canvas
                         axes = dr.rect.axes
                         canvas.draw()
                         dr.background = canvas.copy_from_bbox(dr.rect.axes.bbox)
-                        dr.rect.set_color(self.colors['selected'])
+                        dr.rect.set_color(self.selected)
                         axes.draw_artist(dr.rect)
                         canvas.blit(axes.bbox)
-                except (ValueError,TypeError):
+                except (ValueError, TypeError):
                     print("Something was wrong with re-coloring the bars upon input selection!")
                     return
             txt_box.set_val('')
 
     def _deselect_all(self):
         print("Resetting plot...")
-        for dr in self.drs:
+        for dr in self._drs:
             dr.color = dr.original_color
             canvas = dr.rect.figure.canvas
             axes = dr.rect.axes
             dr.rect.set_color(dr.original_color)
             axes.draw_artist(dr.rect)
             canvas.blit(axes.bbox)
-        self.selected_solvents = []
+        self._selected_solvents = []
         print("Plot resetted!")
 
     def _save_selection(self, abb, solute: Solute, solvent: Solvent, reference: Reference) -> str:
-        print('Number of solvents chosen: ' + str(len(self.selected_solvents)))
-        filename = 'solvated_structure-' + str(len(self.selected_solvents)) + '.pdb'
-        print('Your microsolvated structure is written to: ' + filename)
+        print('\nSolvents chosen: ' + str([solv+1 for solv in sorted(self._selected_solvents)]) +
+              ' (Total: {0})'.format(len(self._selected_solvents)))
+        filename = 'solvated_structure-' + str(len(self._selected_solvents)) + '.pdb'
 
         # does not open GUI, but saves plot of selected bars
         barcolors = self._determine_colors(solute, solvent)
-        for select in self.selected_solvents:
-            barcolors[select] = self.colors['selected']
+        for select in self._selected_solvents:
+            barcolors[select] = self.selected
         self._create_plot(barcolors, solvent, True)
 
         # writes latest solvated structure to file to open with pymol
@@ -441,9 +522,9 @@ class Plot:
         # info: this object finally contains all element labels, coords and values of all selected solvents.
         selected_solvent = Solvent()
 
-        # TODO: Check if selected_solvents order coincides with order of solvent.coord entries,
+        # TODO: Check if _selected_solvents order coincides with order of solvent.coord entries,
         #  i.e. are solvent.coord entries sorted wrt their energy
-        for select in self.selected_solvents:
+        for select in self._selected_solvents:
             voxel = int(solvent.data[select][0]) #TODO: Type conversion prone to ValueError
             quats = solvent.quats[voxel]
             grid_point = (float(solvent.data[select][1]),
@@ -451,13 +532,14 @@ class Plot:
                           float(solvent.data[select][3])) #TODO: Prone to ValueError.
 
             #This finally determines the solvent to be placed.
-            elements, coords = reference._find_avg_solvent(voxel, quats, grid_point, verbose=False)
+            elements, coords = reference._find_avg_solvent(voxel, quats, grid_point)
             values = float(solvent.data[select][-1])
             selected_solvent.elements.extend(elements)
             selected_solvent.coords.extend(coords)
             selected_solvent.values.extend([values]*len(elements))
 
         write_pdb(filename, selected_solvent, abb, solute=False)
+        print('Your microsolvated structure was written to: ' + filename)
         return filename
 
 
@@ -496,17 +578,17 @@ class ClickableBar:
         # now redraw just the rectangle
         # self.color is used to determine whether solvent gets selected or deselected
         # self.original_color is used to get previous color if solvent is deselected
-        if self.color == self.plot.colors['selected']:
-            print('solvent deselected:', int(np.round(event.xdata)))
-            self.plot.selected_solvents.remove(index)
+        if self.color == self.plot.selected:
+            print('Solvent deselected:', int(np.round(event.xdata)))
+            self.plot._selected_solvents.remove(index)
             self.rect.set_color(self.original_color)
             self.color = self.original_color
 
         else:
-            print('solvent selected:', int(np.round(event.xdata)))
-            self.plot.selected_solvents.append(index)
-            self.rect.set_color(self.plot.colors['selected'])
-            self.color = self.plot.colors['selected']
+            print('Solvent selected:', int(np.round(event.xdata)))
+            self.plot._selected_solvents.append(index)
+            self.rect.set_color(self.plot.selected)
+            self.color = self.plot.selected
         axes.draw_artist(self.rect)
 
         # and blit just the redrawn area

@@ -7,9 +7,10 @@ See LICENSE for details
 """
 
 import os
+import shutil
 import typing
 from ..utilities.mol2_to_xyz import converter
-from ..utilities.io_handling import write_xyz as write
+from ..utilities.io_handling.write_xyz import write_xyz as write
 from ..utilities.quat_handling import *
 from pymatgen.core import Molecule
 from pymatgen.symmetry import analyzer as ana
@@ -41,18 +42,17 @@ class Reference:
     This class contains all necessary information on the used solvent and has methods
     to deal with quaternions and equivalent structures.
     """
-    def __init__(self, case, com, solv_file = None, abb : str = "WAT",
+    def __init__(self, com, solv_file = None, abb : str = "WAT",
                  rigid_atom_0 : int = 0, rigid_atom_1 : int = 1, rigid_atom_2 : int = 2):
+        self.verbose = False # additional output for debugging
         self.solv_file = solv_file #contains path to mol2 or xyz-file
         self.abb = abb
         self.com = com
 
         if self.solv_file.split(".")[-1] == "xyz":
-            print("xyz-file given!")
             self.xyz_path = solv_file
         elif self.solv_file.split(".")[-1] == "mol2":
             self.xyz_path = converter(os.path.dirname(self.solv_file), self.abb) #returns path of generated xyz-file.
-            print("mol2-file given!")
         else:
             quit("Only xyz and mol2 files can be given as solvent molecules!")
 
@@ -60,35 +60,9 @@ class Reference:
         self.mol = Molecule.from_file(self.xyz_path) #pymatgen interface
         self.cmol = self.mol.get_centered_molecule()
 
-        if case == 1:
-            self.rigid_atom_idx_0 = None #used for testing if everything went well
-            self.rigid_atom_idx_1 = None #used for testing if everything went well
-            self.rigid_atom_idx_2 = None #used for testing if everything went well
-            if type(rigid_atom_0) == str and type(rigid_atom_1) == str and type(rigid_atom_2) == str:
-                first = False #if H and H are chosen as rigid atoms
-
-                for atom in range(len(self.mol.labels)): #just works for water expecting O/COM, H and H for the input of rigid atoms
-                    if not self.com: #only for com = False
-                        if rigid_atom_0 == self.mol.labels[atom]:
-                            self.rigid_atom_idx_0 = atom
-
-                    if not first and rigid_atom_1 == self.mol.labels[atom]:
-                        self.rigid_atom_idx_1 = atom
-                        first = True
-
-                    elif rigid_atom_2 == self.mol.labels[atom]:
-                        self.rigid_atom_idx_2 = atom
-
-                if self.rigid_atom_idx_0 == None or self.rigid_atom_idx_1 == None or self.rigid_atom_idx_2 == None:
-                    quit("Something is wrong with declaring the rigid atoms. Please check all-settings.yaml!")
-            else:
-                self.rigid_atom_idx_0 = rigid_atom_0  # 1 = O if using water
-                self.rigid_atom_idx_1 = rigid_atom_1  # 2 = H if using water
-                self.rigid_atom_idx_2 = rigid_atom_2 #3 = H if using water
-        else:
-            self.rigid_atom_idx_0 = rigid_atom_0 #1 = O if using water
-            self.rigid_atom_idx_1 = rigid_atom_1 #2 = H if using water
-            self.rigid_atom_idx_2 = rigid_atom_2 #3 = H if using water
+        self.rigid_atom_idx_0 = rigid_atom_0
+        self.rigid_atom_idx_1 = rigid_atom_1
+        self.rigid_atom_idx_2 = rigid_atom_2
 
         if self.com:
             print("Using rigidatoms {0} and {1} for quaternion determination!".format(self.rigid_atom_idx_1,
@@ -113,22 +87,32 @@ class Reference:
         self.atoms = []
         self.values = []
         self.all_values = []
-        self.keep = False #cleans up xyz-files. not implemented yet
 
     def _makedir(self, path: str) -> str:
         """used primarily to create a folder that contains the reference structure
         of pyConSolv solvents in structures.py"""
-        import datetime
-        path = path + "_{0}".format(str(datetime.date.today()))
-        if not os.path.exists(path):
-            os.makedirs(path)
+        if self.verbose: # creates a folder with the reference structures everytime a FEBISS analysis is conducted
+            import datetime
+            path = path + "_{0}".format(str(datetime.date.today()))
+            if not os.path.exists(path):
+                os.mkdir(path)
+            else:
+                num = 1
+                while os.path.exists(path + "_{0}".format(str(num))):
+                    num += 1
+                path = path + "_{0}".format(str(num))
+                os.mkdir(path)
+            return os.path.abspath(path)
+
         else:
-            num = 1
-            while os.path.exists(path + "_{0}".format(str(num))):
-                num += 1
-            path = path + "_{0}".format(str(num))
-            os.makedirs(path)
-        return os.path.abspath(path)
+            if not os.path.exists(path):
+                os.mkdir(path)
+
+            else:
+                shutil.rmtree(path)
+                os.mkdir(path)
+
+            return os.path.abspath(path)
 
     def _process_equivalent_structures(self, write_out: bool = True):
 
@@ -140,9 +124,9 @@ class Reference:
         # directory containing the xyz files of equivalent structures
         self.refdir_path = self._makedir("REF_{0}".format(self.abb))
 
+
         #last placeholder is for enumeration of files used in write()
         path_template = self.refdir_path+"/{0}".format(self.abb)+"_{0}.xyz"
-
 
         #building up self.equivalent_structures and self.symmetry_rots_as_quats
         pga = ana.PointGroupAnalyzer(self.cmol)
@@ -181,7 +165,7 @@ class Reference:
             num += 1
 
     def _find_avg_solvent(self, voxel: int, quats: list[quat.quaternion],
-                          grid_point: tuple[typing.Any,typing.Any,typing.Any], verbose = False):
+                          grid_point: tuple[typing.Any,typing.Any,typing.Any]):
         """
         This method finally:
         1) cleans up characteristic quaternions (quats) stored for the given voxel (voxel) by comparing them to the
@@ -204,18 +188,18 @@ class Reference:
             for j in range(len(key_list)):
                 distance_list.append(distance(quats[i], self.eq_dict[key_list[j]][2]))
 
-            if verbose:
+            if self.verbose:
                 print("\n\nquat: {0}".format(i))
                 print("distance_list: {0}".format(distance_list))
 
             min_idx = distance_list.index(min(distance_list))
-            if verbose:
+            if self.verbose:
                 print("min_idx: {0}".format(min_idx))
                 print("quats[{1}] before clean-up: {0}".format(quats[i],i))
 
             quats[i] = quats[i] * inv(self.char_q) * inv(self.eq_dict[key_list[min_idx]][0]) * self.char_q
 
-            if verbose:
+            if self.verbose:
                 print("quats[{1}] after clean-up: {0}".format(quats[i],i))
                 print("distance now: {0}".format(distance(quats[i], self.eq_dict[key_list[min_idx]][2])))
 
@@ -227,15 +211,15 @@ class Reference:
         new_coords = new_coord_gen(self.cmol, qt, np.array(grid_point))
 
         if not self.com: #in the nocom case, we translate the com by the coordinate of the rigid_atom_0
-            if verbose:
+            if self.verbose:
                 print('new coords before = {0}'.format(new_coords))
             new_coords = list(np.array(new_coords) + (np.array(grid_point)-np.array(new_coords[0])))
-            if verbose:
+            if self.verbose:
                 print('new coords after = {0}'.format(new_coords))
                 print('grid point = {0}'.format(grid_point))
 
 
-        if verbose:
+        if self.verbose:
             write(self.xyz_path, self._makedir("quats")+"/avg_at_voxel_{0}", new_coords, voxel)
 
         return self.cmol.labels, new_coords

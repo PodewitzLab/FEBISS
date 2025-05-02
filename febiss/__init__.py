@@ -6,6 +6,7 @@ Copyright Technische Universität Wien, Institute of Materials Chemistry, Podewi
 See LICENSE for details
 """
 
+import sys
 from typing import Dict
 import os
 import yaml

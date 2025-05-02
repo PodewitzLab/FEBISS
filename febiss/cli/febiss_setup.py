@@ -13,7 +13,13 @@ import yaml
 
 from febiss import SETTINGS_FILE
 
-default = {'installation_path': '~/.dependencies_febiss', 'openmp': True, 'cuda': True, 'singularity' : False}
+default = {'installation_path': '~/.dependencies_febiss',
+           'github_owner': 'podewitzlab',
+           'github_repo': 'cpptraj.git',
+           'github_branch': 'master',
+           'openmp': True,
+           'cuda': True,
+           'singularity': False}
 
 
 def help_message():
@@ -50,9 +56,7 @@ def main():
     cwd = os.getcwd()
 
     # install dependencies
-    inst_path = param["installation_path"]
-    if '~' in inst_path:
-        inst_path = os.path.expanduser(inst_path)
+    inst_path = os.path.abspath(os.path.expanduser(param["installation_path"]))
 
     # Create target directory if don't exist
     if not os.path.exists(inst_path):
@@ -60,14 +64,16 @@ def main():
     os.chdir(inst_path)
 
     if param['singularity'] == False:
-        subprocess.call(['git', 'clone', 'https://github.com/maberl1/cpptraj.git'])
+        process_list = ['git', 'clone', 'https://github.com/{0}/{1}'.format(param['github_owner'], param['github_repo']), '-b', param['github_branch']]
 
-        # change CPPTRAJ to working version
-        os.chdir('cpptraj')
+        subprocess.call(process_list)
 
         # # save directories for rc file
-        cpptraj_home = os.path.join(inst_path, 'cpptraj')
-        os.chdir(os.path.join(inst_path, 'cpptraj'))
+        cpptraj_home = os.path.abspath(os.path.join(inst_path, param['github_repo'].strip('.git')))
+        print(cpptraj_home)
+
+        # change CPPTRAJ to working version
+        os.chdir(cpptraj_home)
 
         # build command for configure of cpptraj and binary name based on given yaml
         configure = ['yes | bash ./configure'] #yes command downloads and installs fftw3
@@ -91,7 +97,7 @@ def main():
         except KeyError:
             subprocess.call(['make'])
 
-        cpptraj_home = {'CPPTRAJ_BIN':os.path.join(cpptraj_home, 'bin', bin_string)}
+        cpptraj_home = {'CPPTRAJ_BIN': os.path.join(cpptraj_home, 'bin', bin_string)}
         if not os.path.exists(cpptraj_home['CPPTRAJ_BIN']):
             raise FileNotFoundError('ERROR, the binary ' + bin_string + ' does not exist, check ' +
                                     cpptraj_home['CPPTRAJ_BIN'] + ' or output above for possible reasons')

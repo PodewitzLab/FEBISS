@@ -29,7 +29,7 @@ class ButtonActions(object):
         rows, cols = self._get_rows_and_cols(display)
 
         count = 0  # only count existing -> not enumerate
-        for existing, (symbol, name) in zip(display.existing_elements, display.rdf_names.items()):
+        for existing, (symbol, name) in zip(display.existing_elements, display._rdf_names.items()):
             if existing:
                 count += 1
 
@@ -51,7 +51,7 @@ class ButtonActions(object):
 
                 # determine integrals
                 sc_x, sc_y, integrals = self._find_local_minima_and_maxima(x, y, name)
-                sc = plt.scatter(sc_x, sc_y, s=10, c=display.colors['mark'])
+                sc = plt.scatter(sc_x, sc_y, s=10, c=display.mark)
                 self.integrals.append(integrals)
                 self.scs.append(sc)
                 annot = ax.annotate("", xy=(0, 0), xytext=(20, 20), textcoords="offset points",
@@ -60,11 +60,11 @@ class ButtonActions(object):
                 self.annots.append(annot)
 
                 # title and label specifications
-                plt.xlabel("Distance of " + str(name) + ' to oxygen atoms in water / \u00c5')
+                plt.xlabel("Distance of " + str(name) + ' to central point in solvent / \u00c5')
                 plt.ylabel('RDF')
                 plt.xticks(np.arange(0, np.max(x) + 0.5, step=0.5))
                 ax.set_xlim([0, np.max(x)])
-                ax.axhline(y=1, ls='--', color=display.colors['mark'])
+                ax.axhline(y=1, ls='--', color=display.mark)
                 plt.plot(x, y, linestyle="-", color='#80b1d3')
 
         plt.ion()  # avoids 'The event loop is already running' error message
@@ -104,11 +104,11 @@ class ButtonActions(object):
     def _update_annot(self, ind, subplot_number: int):
         index = ind['ind'][0]
         integral = self.integrals[subplot_number][index]
-        text = "{0:.2f} waters".format(integral)
+        text = "{0:.2f} solvents".format(integral)
         annot = self.annots[subplot_number]
         annot.xy = self.scs[subplot_number].get_offsets()[index]
         annot.set_text(text)
-        annot.get_bbox_patch().set_facecolor(self.display.colors['mark'])
+        annot.get_bbox_patch().set_facecolor(self.display.mark)
         annot.get_bbox_patch().set_alpha(0.4)
 
     def _hover(self, event):
