@@ -224,7 +224,7 @@ class Window(QDialog):
         self.display.ylabel = self.ui.ylabel.text()
         self.display.plotname = self.ui.plotname.text()
         self.display.selected_plotname = self.ui.selected_plotname.text()
-        self.display.orientation = self.ui.orientation.currentText()
+        #self.display.orientation = self.ui.orientation.currentText()
         self.display.fontsize = self.ui.fontsize.text()
         self.display.number_xtics = self.ui.number_xtics.text()
         self.display.y_numbers = self.ui.y_numbers.text()

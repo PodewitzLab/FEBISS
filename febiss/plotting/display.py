@@ -44,7 +44,7 @@ class Plot(Checker):
             'ylabel': ('type', 'str'),
             'selected_plotname': ('format', '[a-zA-Z0-9\._\-]+.png'),
             'plotname': ('format', '[a-zA-Z0-9\._\-]+.png'),
-            'orientation':('format', '(?i)landscape|portrait'),
+            #'orientation':('format', '(?i)landscape|portrait'),
             'fontsize': ('type', 'int'),
             'number_xtics': ('type', 'int'),
             'y_numbers': ('type', 'float'),
@@ -121,7 +121,7 @@ class Plot(Checker):
         self.ylabel = '$-$ Free Energy / kcal mol$^{-1}$'
         self.selected_plotname = 'febiss-plot-selected.png'
         self.plotname = 'febiss-plot.png'
-        self.orientation = 'landscape'
+        #self.orientation = 'landscape'
         self.fontsize = 18
         self.number_xtics = 10
         self.y_numbers = 0.25
@@ -336,9 +336,12 @@ class Plot(Checker):
         # saves figure without title and button
         if save_selected:
             plt.savefig(self.selected_plotname, dpi=self.dpi, transparent=self.transparent,
-                        orientation=self.orientation)
+                        #orientation=self.orientation
+                        )
         else:
-            plt.savefig(self.plotname, dpi=self.dpi, transparent=self.transparent, orientation=self.orientation)
+            plt.savefig(self.plotname, dpi=self.dpi, transparent=self.transparent,
+            #orientation=self.orientation
+            )
 
             # legend with green bars and title specifications for "GUI"
             self._create_legend(ax, save_selected=True)

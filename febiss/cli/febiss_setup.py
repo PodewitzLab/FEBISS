@@ -32,6 +32,7 @@ def help_message():
     print('An example with all possible settings:\n')
     print(yaml.dump(default))
     print("If you want to use these default options, you can also give 'default' as an argument to the program.\n")
+    print("\nPlease also make sure you have these packages installed: gcc g++ gfortran curl wget zlib1g-dev automake")
     sys.exit()
 
 
