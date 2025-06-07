@@ -1,10 +1,10 @@
 import os
 def converter(path,abb):
-    if not os.path.isfile("path"+"{0}.xyz".format(abb)):
+    if not os.path.isfile(path+"{0}.xyz".format(abb)):
         start = "@<TRIPOS>ATOM"
         stop = "@<TRIPOS>BOND"
         path_mol2 = path+"/{0}.mol2".format(abb)
-        path_xyz = path+"/{0}.xyz".format(abb)
+        path_xyz = "{0}.xyz".format(abb)
 
         with open(path_mol2,'r') as mol2file:
             lines = mol2file.readlines()
@@ -32,4 +32,4 @@ def converter(path,abb):
             with open(path_xyz,'w') as xyzfile:
                     xyzfile.writelines(xyz_lines)
 
-            return path_xyz
+            return os.path.abspath(path_xyz)

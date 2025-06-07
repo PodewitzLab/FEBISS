@@ -17,6 +17,7 @@ from ..utilities.structures import Solute, Reference, Solvent
 from ..utilities.io_handling.write_settings_file import write_settings_file
 from ..utilities.io_handling.write_style_file import write_style_file
 from ..utilities.io_handling.read_settings import read_settings
+from ..utilities.io_handling.input import Input
 
 
 def help_message():
@@ -125,6 +126,10 @@ def main():
         if which('pymol') is not None:
             style_file = write_style_file()
             subprocess.call(['pymol', filename, style_file])
+
+        else:
+            if Input("PyMol not found. Do you still want to print a style file for PyMol? [y/n]").yn():
+                write_style_file()
 
         print('FEBISS ended successfully')
         sys.exit()
