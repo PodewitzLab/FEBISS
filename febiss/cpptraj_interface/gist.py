@@ -9,11 +9,13 @@ See LICENSE for details
 import os
 import sys
 import subprocess
+
+from febiss.utilities import ELEMENT_DICT
 from collections import OrderedDict
-from .io_handling.settings_checker import Checker
-from .io_handling.input import Input
-from .io_handling.write_cpptraj_files import _write_gist_cpptraj_file, _write_gist_input_line, _write_rdf_input_line
-from .io_handling.write_solute import _write_solute_pdb
+from febiss.utilities.check_settings import Checker
+from febiss.utilities.input import Input
+from febiss.cpptraj_interface.write_cpptraj_files import write_gist_cpptraj_file, write_rdf_input_files
+from febiss.utilities.write_grid import write_out_gist_grid
 
 from febiss import SETTINGS, SETTINGS_FILE
 
@@ -47,7 +49,7 @@ class GistAnalyser(Checker):
             'solv_file': ('path', 'str'),
             'com': ('type', 'bool'),
             'refdens': ('type', 'float'),
-            'ref_eww': ('type', 'float'),
+            'ref_evv': ('type', 'float'),
             'solv_abb': ('type', 'str'),
             'rigid_atom_0': ('format', '-1|[0-9]+'),
             'rigid_atom_1': ('format', '[0-9]+'),
@@ -67,41 +69,42 @@ class GistAnalyser(Checker):
 
         #set allowed keys
         self.allowed_keys = OrderedDict({
-            'frame_selection': ('format', '[0-9]+ [0-9]+ [0-9]+|None'),
-            'grid_center': ('format', '\([0-9]+.[0-9]+, [0-9]+.[0-9]+, [0-9]+.[0-9]+\)|None'),
+            'frame_selection': ('format', '[0-9]+ [0-9]+ [0-9]+|(?i)None|^$'),
+            'grid_center': ('format', '\([0-9]+.[0-9]+, [0-9]+.[0-9]+, [0-9]+.[0-9]+\)|(?i)None|^$'),
             'grid_spacing': ('type', 'float'),
             'grid_lengths': ('format', '\([0-9]+, [0-9]+, [0-9]+\)'),
             'solute_residues': ('format', '[a-zA-Z0-9:@]+'),
             'gist_cpptraj_command_file': ('format', '[a-zA-Z0-9:@\._\-]+\.in'),
             'gist_out_file': ('format', '[a-zA-Z0-9:@\._\-]+\.dat'),
             'gist_grid_file': ('format', '[a-zA-Z0-9:@\._\-]+\.xyz'),
-            'rdf': ('type', 'bool'),
-            'rdf_name_center2': ('type','str'),
-            'rdf_name_carbon': ('type', 'str'),
-            'rdf_name_oxygen': ('type', 'str'),
-            'rdf_name_nitrogen': ('type', 'str'),
-            'rdf_name_phosphorus': ('type', 'str')
+            'rdf_elements': ('format', '[a-zA-Z,]+|(?i)None|^$'),
+            'rdf_maximum':('type','float'),
+            'rdf_spacing':('type','float')
         })
 
         self.__dict__.update((k, v) for k, v in kwargs.items() if k in self.allowed_keys.keys())
 
         # Set up auxiliary dictionaries
-        self._rdf_names = {'center2': self.rdf_name_center2,
-                          'C': self.rdf_name_carbon,
-                          'O': self.rdf_name_oxygen,
-                          'N': self.rdf_name_nitrogen,
-                          'P': self.rdf_name_phosphorus}
+        self._rdf_names = {}
+
+        if str(self.rdf_elements).lower() not in ['', 'none']:
+            not_recognized = []
+            for element in self.rdf_elements.split(','):
+                try:
+                    if element.lower() == 'center':
+                        self._rdf_names['center']='Center'
+                    else:
+                        self._rdf_names[ELEMENT_DICT[element.lower()][0]]=ELEMENT_DICT[element.lower()][1]
+                except KeyError:
+                    not_recognized.append(element)
+            if len(not_recognized) != 0:
+                print("The following elements were not recognized, thus no RDF will be performed for them:")
+                for unknown in not_recognized:
+                    print("\t-{0}".format(unknown))
+                print("\n")
 
         self._all_keys.update(self.required_keys)
         self._all_keys.update(self.allowed_keys)
-
-
-    def perform_solute_write_out(self):
-        solute_in = _write_solute_pdb(self)
-        self._execute_cpptraj(solute_in)
-        if not os.path.exists('solute.pdb'):
-            raise UnsuccessfulAnalysisException(
-                "'solute.pdb' is not present, writing out the solute from the simulation did not work.")
 
 
     def perform_gist_analysis(self):
@@ -112,8 +115,7 @@ class GistAnalyser(Checker):
                 print("Skipping analysis and using existing data.")
                 return
 
-        _write_gist_cpptraj_file(self)
-        _write_gist_input_line(self)
+        write_gist_cpptraj_file(self)
         self._execute_cpptraj(self.gist_cpptraj_command_file)
 
         if not os.path.exists('febiss.dat'):
@@ -121,7 +123,7 @@ class GistAnalyser(Checker):
                 "'febiss.dat' is not present, the CPPTRAJ analysis did not work.")
 
     def perform_rdf_analysis(self):
-        if self.rdf:
+        if len(self._rdf_names) != 0:
             if self.check_path('rdf*dat'):
                 print("\nWARNING: Found some RDF data in directory. ")
 
@@ -129,10 +131,13 @@ class GistAnalyser(Checker):
                     print("Skipping analysis and using existing data.")
                     return
 
-            file_list = _write_rdf_input_line(self)
+            file_list = write_rdf_input_files(self)
             if len(file_list) != 0:
                 for file in file_list:
                     self._execute_cpptraj(file)
+
+    def perform_gist_grid_write_out(self):
+        write_out_gist_grid(self)
 
 
     def _set_defaults(self):
@@ -145,7 +150,7 @@ class GistAnalyser(Checker):
         self.solv_file = "PATH_TO_SOLVENT_FILE"
         self.com = False
         self.refdens = None
-        self.ref_eww = None
+        self.ref_evv = None
         self.solv_abb = None
         self.rigid_atom_0 = 0
         self.rigid_atom_1 = 1
@@ -158,21 +163,18 @@ class GistAnalyser(Checker):
         self.grid_lengths = (60, 60, 60)
 
         self.solute_residues = ':1'
-        self.gist_cpptraj_command_file = 'gist.in'
+        self.gist_cpptraj_command_file = 'cpptraj.in'
         self.gist_out_file = 'gist-output.dat'
         self.gist_grid_file = 'gist_grid.xyz'
-        self.rdf = False
-        self.rdf_name_center2 = 'Center'
-        self.rdf_name_carbon = 'Carbon'
-        self.rdf_name_oxygen = 'Oxygen'
-        self.rdf_name_nitrogen = 'Nitrogen'
-        self.rdf_name_phosphorus = 'Phosphorus'
+        self.rdf_elements = None
+        self.rdf_maximum = 10.0
+        self.rdf_spacing = 0.05
 
         #hidden attributes
         self._quatfile = 'gist-quats.dat'
         self._rdf_names = {} # Will be updated after initializing required_keys and allowed_keys.
         self._nvoxels = 0 # Will be calculated from grid lengths after a successful sanity check.
-        self._all_keys = {} # Will be updated after initializing required_keys and allowed_keys.
+        self._all_keys = OrderedDict({}) # Will be updated after initializing required_keys and allowed_keys.
         self._rdf_cpptraj_command_file = 'rdf_{0}.in'
 
 

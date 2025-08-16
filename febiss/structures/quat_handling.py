@@ -1,7 +1,7 @@
 import numpy as np
 from pymatgen.core import Molecule
 import quaternion as quat
-from .averageQuaternions import averageQuaternions as avg
+from febiss.structures.averageQuaternions import averageQuaternions as avg
 
 def normalize(v1: np.ndarray):
     return v1 / np.linalg.norm(v1)

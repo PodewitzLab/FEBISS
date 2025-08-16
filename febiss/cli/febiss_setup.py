@@ -9,17 +9,18 @@ See LICENSE for details
 import os
 import subprocess
 import sys
+from collections import OrderedDict
+
 import yaml
 
 from febiss import SETTINGS_FILE
 
-default = {'installation_path': '~/.dependencies_febiss',
+default = OrderedDict({'installation_path': '~/.dependencies_febiss',
            'github_owner': 'podewitzlab',
            'github_repo': 'cpptraj.git',
            'github_branch': 'master',
            'openmp': True,
-           'cuda': True,
-           'singularity': False}
+           'cuda': True})
 
 
 def help_message():
@@ -64,72 +65,64 @@ def main():
         os.mkdir(inst_path)
     os.chdir(inst_path)
 
-    if param['singularity'] == False:
-        process_list = ['git', 'clone', 'https://github.com/{0}/{1}'.format(param['github_owner'], param['github_repo']), '-b', param['github_branch']]
+    process_list = ['git', 'clone', 'https://github.com/{0}/{1}'.format(param['github_owner'], param['github_repo']), '-b', param['github_branch']]
 
-        subprocess.call(process_list)
+    subprocess.call(process_list)
 
-        # # save directories for rc file
-        cpptraj_home = os.path.abspath(os.path.join(inst_path, param['github_repo'].strip('.git')))
-        print(cpptraj_home)
+    # # save directories for rc file
+    cpptraj_home = os.path.abspath(os.path.join(inst_path, param['github_repo'].strip('.git')))
 
-        # change CPPTRAJ to working version
-        os.chdir(cpptraj_home)
+    # change CPPTRAJ to working version
+    os.chdir(cpptraj_home)
 
-        # build command for configure of cpptraj and binary name based on given yaml
-        configure = ['yes | bash ./configure'] #yes command downloads and installs fftw3
-        bin_string = 'cpptraj'
+    # build command for configure of cpptraj and binary name based on given yaml
+    configure = ['yes | bash ./configure'] #yes command downloads and installs fftw3
+    bin_string = 'cpptraj'
 
-        # dict.get returns None if not present, otherwise value
-        if param.get('openmp'):
-            configure.append("-openmp")
-            bin_string += '.OMP'
+    # dict.get returns None if not present, otherwise value
+    if param.get('openmp'):
+        configure.append("-openmp")
+        bin_string += '.OMP'
 
-        if param.get('cuda'):
-            configure.append("-cuda")
-            bin_string += '.cuda'
-        configure.append("gnu")
+    if param.get('cuda'):
+        configure.append("-cuda")
+        bin_string += '.cuda'
+    configure.append("gnu")
 
-        # install cpptraj
-        subprocess.run(" ".join(configure), shell=True)
-        try:
-            n_cores = os.environ['OMP_NUM_THREADS']
-            subprocess.call(['make', '-j', str(n_cores)])
-        except KeyError:
-            subprocess.call(['make'])
+    # install cpptraj
+    subprocess.run(" ".join(configure), shell=True)
+    try:
+        n_cores = os.environ['OMP_NUM_THREADS']
+        subprocess.call(['make', '-j', str(n_cores)])
+    except KeyError:
+        subprocess.call(['make'])
 
-        cpptraj_home = {'CPPTRAJ_BIN': os.path.join(cpptraj_home, 'bin', bin_string)}
-        if not os.path.exists(cpptraj_home['CPPTRAJ_BIN']):
-            raise FileNotFoundError('ERROR, the binary ' + bin_string + ' does not exist, check ' +
-                                    cpptraj_home['CPPTRAJ_BIN'] + ' or output above for possible reasons')
+    cpptraj_home = {'CPPTRAJ_BIN': os.path.join(cpptraj_home, 'bin', bin_string)}
+    if not os.path.exists(cpptraj_home['CPPTRAJ_BIN']):
+        raise FileNotFoundError('ERROR, the binary ' + bin_string + ' does not exist, check ' +
+                                cpptraj_home['CPPTRAJ_BIN'] + ' or output above for possible reasons')
 
-        # save settings in rc file in home
-        if os.path.exists(SETTINGS_FILE):
-            print('WARNING: Overwriting existing rc file.')
-            while True:
-                inp = input("Are you sure? [y/n] ")
-                if inp.strip().lower() in ['y', 'yes']:
-                    break
-                elif inp.strip().lower() in ['n', 'no']:
-                    print('Keeping old rc info. This could be wrong, please check ' + SETTINGS_FILE)
-                    os.chdir(cwd)
-                    sys.exit()
-                else:
-                    print("Sorry wrong input, just 'y' or 'n'.")
+    # save settings in rc file in home
+    if os.path.exists(SETTINGS_FILE):
+        print('WARNING: Overwriting existing rc file.')
+        while True:
+            inp = input("Are you sure? [y/n] ")
+            if inp.strip().lower() in ['y', 'yes']:
+                break
+            elif inp.strip().lower() in ['n', 'no']:
+                print('Keeping old rc info. This could be wrong, please check ' + SETTINGS_FILE)
+                os.chdir(cwd)
+                sys.exit()
+            else:
+                print("Sorry wrong input, just 'y' or 'n'.")
 
-        with open(SETTINGS_FILE, 'w') as outfile:
-            yaml.dump(cpptraj_home, outfile, default_flow_style=False, allow_unicode=True)
+    with open(SETTINGS_FILE, 'w') as outfile:
+        yaml.dump(cpptraj_home, outfile, default_flow_style=False, allow_unicode=True)
 
-        # move back to previous working directory
-        os.chdir(cwd)
-        print('\nInstallation successful, these are the saved settings:')
-        print(open(SETTINGS_FILE, 'r').read())
-
-    elif param['singularity'] == True:
-        print('Not yet implemented!')
-
-    else:
-        raise TypeError('Please check your yaml-file. Parameter "singularity" only takes "True" or "False"')
+    # move back to previous working directory
+    os.chdir(cwd)
+    print('\nInstallation successful, these are the saved settings:')
+    print(open(SETTINGS_FILE, 'r').read())
 
 if __name__ == '__main__':
     main()

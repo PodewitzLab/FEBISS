@@ -9,7 +9,6 @@ See LICENSE for details
 import os
 import glob
 import re
-import sys
 
 
 class Checker:

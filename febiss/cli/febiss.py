@@ -13,11 +13,13 @@ import sys
 import quaternion
 import numpy as np
 
-from ..utilities.structures import Solute, Reference, Solvent
-from ..utilities.io_handling.write_settings_file import write_settings_file
-from ..utilities.io_handling.write_style_file import write_style_file
-from ..utilities.io_handling.read_settings import read_settings
-from ..utilities.io_handling.input import Input
+from febiss.structures.solvent import Solvent
+from febiss.structures.reference import Reference
+from febiss.structures.solute import Solute
+from febiss.utilities.write_settings_file import write_settings_file
+from febiss.utilities.write_style_file import write_style_file
+from febiss.cpptraj_interface.read_settings import read_settings
+from febiss.utilities.input import Input
 
 
 def help_message():
@@ -90,14 +92,6 @@ def get_settings():
             help_message()
         analyser, display = read_settings(febiss_file)
 
-        # Sanity check
-        analyser._sanity_check()
-        display.sanity_checks()
-
-        if (analyser.err_string or display.err_string) != '':
-            print('The following settings did not pass the checks:' + analyser.err_string + display.err_string)
-            sys.exit()
-
     return analyser, display
 
 
@@ -112,16 +106,17 @@ def main():
                             int(analyser.grid_lengths.strip('()').split(',')[1])*\
                             int(analyser.grid_lengths.strip('()').split(',')[2])
 
-        solvent = Solvent(nvoxels=analyser._nvoxels, ref_eww=analyser.ref_eww)
+        solvent = Solvent(nvoxels=analyser._nvoxels, ref_evv=analyser.ref_evv)
         solute = Solute()
-        reference = Reference(analyser.com, analyser.solv_file, analyser.solv_abb, analyser.rigid_atom_0, analyser.rigid_atom_1, analyser.rigid_atom_2)
+        reference = Reference(analyser.com, analyser.solv_abb, analyser.solv_file, analyser.rigid_atom_0, analyser.rigid_atom_1, analyser.rigid_atom_2)
 
         analyser.perform_rdf_analysis()
         analyser.perform_gist_analysis()
+        analyser.perform_gist_grid_write_out()
 
         read_data(display.febiss_file, solute, solvent)
 
-        filename = display.gui(analyser.solv_abb, solute, solvent, reference)
+        filename = display.gui(analyser, solute, solvent, reference)
 
         if which('pymol') is not None:
             style_file = write_style_file()

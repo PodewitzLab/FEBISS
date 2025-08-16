@@ -1,4 +1,5 @@
 import os
+
 def converter(path,abb):
     if not os.path.isfile(path+"{0}.xyz".format(abb)):
         start = "@<TRIPOS>ATOM"
@@ -32,4 +33,4 @@ def converter(path,abb):
             with open(path_xyz,'w') as xyzfile:
                     xyzfile.writelines(xyz_lines)
 
-            return os.path.abspath(path_xyz)
+    return os.path.abspath(path_xyz)

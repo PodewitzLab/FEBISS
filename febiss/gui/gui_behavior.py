@@ -10,10 +10,10 @@ import sys
 
 import os
 from .gui import Ui_Dialog
-from PyQt6.QtWidgets import QApplication, QDialog, QMainWindow, QPushButton, QFileDialog
-from ..gist import GistAnalyser
-from ...plotting.display import Plot
-from ...solvents import SOLVENT_DICT
+from PyQt6.QtWidgets import QDialog, QFileDialog
+from febiss.cpptraj_interface.gist import GistAnalyser
+from febiss.plotting.display import Plot
+from febiss.solvents import SOLVENT_DICT
 
 class Window(QDialog):
 
@@ -35,7 +35,7 @@ class Window(QDialog):
             'com' : False,
             'solv_file': os.path.abspath(os.path.join(__file__, "../../solvents/{0}".format(SOLVENT_DICT[self.solvent_name][1]))),
             'refdens': SOLVENT_DICT[self.solvent_name][3],
-            'ref_eww': SOLVENT_DICT[self.solvent_name][4],
+            'ref_evv': SOLVENT_DICT[self.solvent_name][4],
             'rigid_atom_0': SOLVENT_DICT[self.solvent_name][2][1],
             'rigid_atom_1': SOLVENT_DICT[self.solvent_name][2][0],
             'rigid_atom_2': SOLVENT_DICT[self.solvent_name][2][2]})
@@ -53,7 +53,7 @@ class Window(QDialog):
         # Set defaults
         self.set_simulation_values()
         self.set_solvent_values(self.solvent_name)
-        self.set_gist_values()
+        self.set_cpptraj_values()
         self.set_plotting_values()
 
         # behavior
@@ -62,9 +62,7 @@ class Window(QDialog):
         self.ui.Browse_solvent.clicked.connect(self.getSolventFile)
         self.ui.Dropdown_solvent.currentIndexChanged.connect(self.changeValues)
         self.ui.com.stateChanged.connect(self.set_and_freeze_center)
-        self.ui.rdf.stateChanged.connect(self.set_and_unfreeze_rdf_names)
         self.ui.Cancel.clicked.connect(self.on_cancel)
-        self.ui.Check.clicked.connect(self.on_check)
         self.ui.Run.clicked.connect(self.on_run)
 
         self.show()
@@ -76,26 +74,27 @@ class Window(QDialog):
 
     def set_solvent_values(self, solvent_name):
         self.ui.solv_abb.setText(SOLVENT_DICT[solvent_name][0])
-        self.ui.solv_file.setText(os.path.abspath(os.path.join(__file__, "../../../solvents/{0}".format(SOLVENT_DICT[solvent_name][1]))))
+        if not solvent_name == 'Custom':
+            self.ui.solv_file.setText(os.path.abspath(os.path.join(__file__, "../../solvents/{0}".format(SOLVENT_DICT[solvent_name][1]))))
+        else:
+            self.ui.solv_file.setText("Choose File ...")
         self.ui.refdens.setText(str(SOLVENT_DICT[solvent_name][3]))
-        self.ui.ref_eww.setText(str(SOLVENT_DICT[solvent_name][4]))
+        self.ui.ref_evv.setText(str(SOLVENT_DICT[solvent_name][4]))
         if not self.ui.com.isChecked(): # Value shall only change upon choosing a different solvent
             self.ui.rigid_atom_0.setProperty('value', SOLVENT_DICT[solvent_name][2][1])
         self.ui.rigid_atom_1.setProperty('value', SOLVENT_DICT[solvent_name][2][0])
         self.ui.rigid_atom_2.setProperty('value', SOLVENT_DICT[solvent_name][2][2])
 
-    def set_gist_values(self):
+    def set_cpptraj_values(self):
         # Grid
         self.ui.grid_center.setPlaceholderText("e.g.: (10.0, 5.0, 0.0)")
         self.ui.grid_lenghts.setText(str(self.analyser.grid_lengths))
         self.ui.grid_spacing.setText(str(self.analyser.grid_spacing))
 
         #RDF
-        self.ui.solute_center.setText(self.analyser.rdf_name_center2)
-        self.ui.carbon.setText(self.analyser.rdf_name_carbon)
-        self.ui.oxygen.setText(self.analyser.rdf_name_oxygen)
-        self.ui.nitrogen.setText(self.analyser.rdf_name_nitrogen)
-        self.ui.phosphorus.setText(self.analyser.rdf_name_phosphorus)
+        self.ui.rdf_elements.setPlaceholderText("e.g.: C,N,O,center")
+        self.ui.rdf_maximum.setText(str(self.analyser.rdf_maximum))
+        self.ui.rdf_spacing.setText(str(self.analyser.rdf_spacing))
 
         # Solute residues
         self.ui.solute_residues.setText(str(self.analyser.solute_residues))
@@ -161,25 +160,11 @@ class Window(QDialog):
             self.ui.rigid_atom_0.setProperty('value', SOLVENT_DICT[self.solvent_name][2][1])
             self.ui.rigid_atom_0.setReadOnly(False)
 
-    def set_and_unfreeze_rdf_names(self):
-        if self.ui.rdf.isChecked():
-            self.ui.solute_center.setReadOnly(False)
-            self.ui.carbon.setReadOnly(False)
-            self.ui.oxygen.setReadOnly(False)
-            self.ui.nitrogen.setReadOnly(False)
-            self.ui.phosphorus.setReadOnly(False)
-        else:
-            self.ui.solute_center.setReadOnly(True)
-            self.ui.carbon.setReadOnly(True)
-            self.ui.oxygen.setReadOnly(True)
-            self.ui.nitrogen.setReadOnly(True)
-            self.ui.phosphorus.setReadOnly(True)
-
     def on_cancel(self):
         sys.exit()
 
 
-    def on_check(self):
+    def on_run(self):
         # Write values of window back to GistAnalyser and Plot objects
         # analyser
         self.analyser.signal = True
@@ -187,11 +172,12 @@ class Window(QDialog):
         self.analyser.trajectory_file = self.ui.trajectory_file.text()
         self.analyser.com = self.ui.com.isChecked()
         self.analyser.solv_file = self.ui.solv_file.text()
-        self.analyser.solv_abb =  self.ui.solv_abb.text()
+        self.analyser.solv_name =  self.ui.Dropdown_solvent.currentText()
         self.analyser.rigid_atom_0 = self.ui.rigid_atom_0.value()
         self.analyser.rigid_atom_1 = self.ui.rigid_atom_1.value()
         self.analyser.rigid_atom_2 = self.ui.rigid_atom_2.value()
-        self.analyser.ref_eww = self.ui.ref_eww.text()
+        self.analyser.ref_evv = self.ui.ref_evv.text()
+        self.analyser.solv_abb = self.ui.solv_abb.text()
         self.analyser.frame_selection = None if self.ui.frame_selection.text() == '' else self.ui.frame_selection.text()
         self.analyser.grid_center = None if self.ui.grid_center.text() == '' else self.ui.grid_center.text()
         self.analyser.grid_spacing = self.ui.grid_spacing.text()
@@ -201,12 +187,9 @@ class Window(QDialog):
         self.analyser.gist_cpptraj_command_file = self.ui.gist_cpptraj_command_file.text()
         self.analyser.gist_out_file = self.ui.gist_out_file.text()
         self.analyser.gist_grid_file = self.ui.gist_grid_file.text()
-        self.analyser.rdf = self.ui.rdf.isChecked()
-        self.analyser.rdf_name_center2 = self.ui.solute_center.text()
-        self.analyser.rdf_name_carbon = self.ui.carbon.text()
-        self.analyser.rdf_name_oxygen = self.ui.oxygen.text()
-        self.analyser.rdf_name_nitrogen = self.ui.nitrogen.text()
-        self.analyser.rdf_name_phosphorus = self.ui.phosphorus.text()
+        self.analyser.rdf_elements = None if self.ui.rdf_elements.text() == '' else self.ui.rdf_elements.text()
+        self.analyser.rdf_maximum = self.ui.rdf_maximum.text()
+        self.analyser.rdf_spacing = self.ui.rdf_spacing.text()
 
         # display
         self.display.cutoff1 = self.ui.cutoff1.text() #distance between solute and solvent
@@ -231,12 +214,7 @@ class Window(QDialog):
         #self.display.marks = []
         self.display.febiss_file = self.ui.febiss_file.text()
         self.display.transparent = self.ui.transparent.isChecked()
-        self.display.solvent_selection = self.ui.solvent_selection.text()
-        self.display.rdf_name_center2 = self.ui.solute_center.text()
-        self.display.rdf_name_carbon = self.ui.carbon.text()
-        self.display.rdf_name_oxygen = self.ui.oxygen.text()
-        self.display.rdf_name_nitrogen = self.ui.nitrogen.text()
-        self.display.rdf_name_phosphorus = self.ui.phosphorus.text()
+        self.display.solvent_selection = None if self.ui.solvent_selection.text() == '' else self.ui.solvent_selection.text()
 
         # Check values
         self.analyser._sanity_check()
@@ -244,12 +222,9 @@ class Window(QDialog):
 
         # Set Run available only after successful evaluation of all settings.
         if self.analyser.err_string == '' and self.display.err_string == '':
-            self.ui.Run.setEnabled(True)
+            self.close()
 
         else:
             print('The following settings did not pass the checks:'+self.analyser.err_string+self.display.err_string)
             self.analyser.err_string = ''
             self.display.err_string = ''
-
-    def on_run(self):
-        self.close()

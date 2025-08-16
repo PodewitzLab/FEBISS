@@ -17,10 +17,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sys
 
-from ..utilities.structures import Solute, Solvent, Reference
-from ..utilities.io_handling.write_pdb import write_pdb
-from ..utilities.io_handling.settings_checker import Checker
-from ..utilities.io_handling.input import Input
+from febiss.cpptraj_interface.gist import GistAnalyser
+from ..structures.solvent import Solvent
+from ..structures.reference import Reference
+from ..structures.solute import Solute
+from febiss.structures.write_pdb import write_pdb
+from febiss.utilities.check_settings import Checker
+from febiss.utilities.input import Input
 from .rdf import ButtonActions
 
 
@@ -50,12 +53,7 @@ class Plot(Checker):
             'y_numbers': ('type', 'float'),
             #'marks': ('format', '\[[0-9]+.[0-9]+\]|\['),
             'transparent': ('type', 'bool'),
-            'solvent_selection': ('format', '[0-9,\- ]*|(?i)None'),
-            'rdf_name_center2': ('type', 'str'),
-            'rdf_name_carbon': ('type', 'str'),
-            'rdf_name_oxygen': ('type', 'str'),
-            'rdf_name_nitrogen': ('type', 'str'),
-            'rdf_name_phosphorus': ('type', 'str')
+            'solvent_selection': ('format', '[0-9,\- ]*|(?i)None|^$'),
         })
 
         # Update attributes
@@ -76,15 +74,9 @@ class Plot(Checker):
             else:
                 print('WARNING: Did not recognize key: ' + str(k))
 
-        # Set up auxiliary dictionary
-        self._rdf_names = {'center2': self.rdf_name_center2,
-                          'C': self.rdf_name_carbon,
-                          'O': self.rdf_name_oxygen,
-                          'N': self.rdf_name_nitrogen,
-                          'P': self.rdf_name_phosphorus}
-
-    def gui(self, abb, solute: Solute, solvent: Solvent, reference: Reference) -> str:
-        if self.solvent_selection is not None:
+    def gui(self, analyser: GistAnalyser, solute: Solute, solvent: Solvent, reference: Reference) -> str:
+        self._rdf_names = analyser._rdf_names
+        if str(self.solvent_selection).lower() in ['', 'none']:
             self._determine_hetero_elements(solute)
             barcolors = self._determine_colors(solute, solvent)
             self._create_plot(barcolors, solvent, False)
@@ -96,7 +88,7 @@ class Plot(Checker):
         if -1 in self._selected_solvents:
             self._selected_solvents.remove(-1)
         self._interactive_reselection(solute, solvent)
-        filename = self._save_selection(abb, solute, solvent, reference)
+        filename = self._save_selection(analyser.solv_abb, solute, solvent, reference)
         return filename
 
     def _distance_squared(self, a_array, b_array) -> float:
@@ -109,36 +101,30 @@ class Plot(Checker):
         self.cutoff1 = 3.0 #distance between solute and solvent
         self.cutoff2 = 6.0 #distance between solute and solvent
         self.displayed_solvents = 30
-        self.within = 'fdb462'
-        self.between = '80b1d3'
-        self.outside = 'de2d26'
+        self.within = '000d98'
+        self.between = '4f61ff'
+        self.outside = 'd1d1ff'
         self.selected = 'b3de69'
         self.mark = 'bc80bd'
         self.width = 16
         self.height = 8
-        self.dpi = 200
-        self.xlabel = 'ID of solvent molecule (click bar or enter ID to select)'
+        self.dpi = 300
+        self.xlabel = 'Solvent ID'
         self.ylabel = '$-$ Free Energy / kcal mol$^{-1}$'
         self.selected_plotname = 'febiss-plot-selected.png'
         self.plotname = 'febiss-plot.png'
         #self.orientation = 'landscape'
         self.fontsize = 18
-        self.number_xtics = 10
-        self.y_numbers = 0.25
+        self.number_xtics = 6
+        self.y_numbers = 0.5
         self.febiss_file = 'febiss.dat'
         #self.marks = str([])
         self.transparent = True
         self.solvent_selection = None
-        self.rdf_name_center2 = 'Center'
-        self.rdf_name_carbon = 'Carbon'
-        self.rdf_name_oxygen = 'Oxygen'
-        self.rdf_name_nitrogen = 'Nitrogen'
-        self.rdf_name_phosphorus = 'Phosphorus'
 
         #hidden
         self._selected_solvents = []
         self._drs = []
-        self._rdf_names = {} # Will be updated after initializing allowed_keys
 
 
     def sanity_checks(self, gui = False):
@@ -179,7 +165,7 @@ class Plot(Checker):
         for symbol in self._rdf_names.keys():
             if symbol in solute.elements:
                 self.existing_elements.append(True)
-            elif symbol == 'center2':
+            elif symbol == 'center':
                 self.existing_elements.append(True)
             else:
                 self.existing_elements.append(False)
@@ -257,6 +243,8 @@ class Plot(Checker):
 
     # creates interactive bar plot
     def _create_plot(self, barcolors: List[str], solvent: Solvent, save_selected: bool):
+        if len(solvent.values) == 0:
+            sys.exit(print("No solvent data found. Please check your settings. Maybe the solvent abbreviation is wrong?"))
         plt.ioff()
         indices = np.arange(1, len(solvent.values) + 1) # x-values
         fig = plt.figure(figsize=(self.width, self.height))
@@ -505,6 +493,7 @@ class Plot(Checker):
         print("Plot resetted!")
 
     def _save_selection(self, abb, solute: Solute, solvent: Solvent, reference: Reference) -> str:
+        self._selected_solvents = list(set(self._selected_solvents))
         print('\nSolvents chosen: ' + str([solv+1 for solv in sorted(self._selected_solvents)]) +
               ' (Total: {0})'.format(len(self._selected_solvents)))
         filename = 'solvated_structure-' + str(len(self._selected_solvents)) + '.pdb'

@@ -6,15 +6,15 @@ Copyright Technische Universität Wien, Institute of Materials Chemistry, Podewi
 See LICENSE for details
 """
 
-def _write_out_gist_grid(analyzer):
+def write_out_gist_grid(analyzer):
     gist_data = open(analyzer.gist_out_file, 'r').readlines()
     solute_elements = []
     solute_atoms = []
 
-    with open('febiss-solvents.pdb', 'r') as f:
+    with open('solute.pdb', 'r') as f:
         for line in f:
             row = line.split()
-            if row[3] == 'SOL':
+            if row[0] == 'ATOM':
                 solute_elements.append(row[2])
                 solute_atoms.append([row[5], row[6], row[7]])
     n_voxels = len(gist_data) - 2
@@ -25,4 +25,4 @@ def _write_out_gist_grid(analyzer):
             f.write(e + '\t' + a[0] + '\t' + a[1] + '\t' + a[2] + '\n')
         for line in gist_data[2:]:
             row = line.split()
-            f.write('X\t' + row[1] + '\t' + row[2] + '\t' + row[3] + '\n')
+            f.write('H\t' + row[1] + '\t' + row[2] + '\t' + row[3] + '\n')

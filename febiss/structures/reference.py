@@ -9,50 +9,32 @@ See LICENSE for details
 import os
 import shutil
 import typing
-from ..utilities.mol2_to_xyz import converter
-from ..utilities.io_handling.write_xyz import write_xyz as write
-from ..utilities.quat_handling import *
+
+from febiss.structures.mol2_to_xyz import converter
+from febiss.structures.write_xyz import write_xyz as write
+from febiss.structures.quat_handling import *
 from pymatgen.core import Molecule
 from pymatgen.symmetry import analyzer as ana
 import quaternion as quat
 
-
-class Solute:
-    def __init__(self):
-
-        # holds 11-tuples for every solute atom in solute.pdb:
-        # ATOM, ordinal number, atomlabel, residuelabel, 1, x, y, z, 1.00, energy, elementlabel
-        self.data = []
-
-        self.elements = []  # contains element names
-        self.coords = None  #contains xyz coordinates
-
-    def get_coord_set(self):
-        coord_list = []
-        for atom in self.data:
-            coord_list.append((float(atom[-6]),float(atom[-5]),float(atom[-4]))) #TODO: Prone to ValueError
-        self.coords = np.asarray(coord_list)
-
-    def get_elements(self): #TODO: merge with get_coord_set since the loop is the same
-        for atom in self.data:
-            self.elements.append(atom[-1])
 
 class Reference:
     """
     This class contains all necessary information on the used solvent and has methods
     to deal with quaternions and equivalent structures.
     """
-    def __init__(self, com, solv_file = None, abb : str = "WAT",
+    def __init__(self, com, solv_abb, solv_file,
                  rigid_atom_0 : int = 0, rigid_atom_1 : int = 1, rigid_atom_2 : int = 2):
+
         self.verbose = False # additional output for debugging
-        self.solv_file = solv_file #contains path to mol2 or xyz-file
-        self.abb = abb
         self.com = com
+        self.solv_abb = solv_abb
+        self.solv_file = solv_file
 
         if self.solv_file.split(".")[-1] == "xyz":
-            self.xyz_path = solv_file
+            self.xyz_path = self.solv_file
         elif self.solv_file.split(".")[-1] == "mol2":
-            self.xyz_path = converter(os.path.dirname(self.solv_file), self.abb) #returns path of generated xyz-file.
+            self.xyz_path = converter(os.path.dirname(self.solv_file), solv_abb) #returns path of generated xyz-file.
         else:
             quit("Only xyz and mol2 files can be given as solvent molecules!")
 
@@ -90,7 +72,7 @@ class Reference:
 
     def _makedir(self, path: str) -> str:
         """used primarily to create a folder that contains the reference structure
-        of pyConSolv solvents in structures.py"""
+        of pyConSolv solvents"""
         if self.verbose: # creates a folder with the reference structures everytime a FEBISS analysis is conducted
             import datetime
             path = path + "_{0}".format(str(datetime.date.today()))
@@ -122,11 +104,11 @@ class Reference:
         """
 
         # directory containing the xyz files of equivalent structures
-        self.refdir_path = self._makedir("REF_{0}".format(self.abb))
+        self.refdir_path = self._makedir("REF_{0}".format(self.solv_abb))
 
 
         #last placeholder is for enumeration of files used in write()
-        path_template = self.refdir_path+"/{0}".format(self.abb)+"_{0}.xyz"
+        path_template = self.refdir_path+"/{0}".format(self.solv_abb)+"_{0}.xyz"
 
         #building up self.equivalent_structures and self.symmetry_rots_as_quats
         pga = ana.PointGroupAnalyzer(self.cmol)
@@ -153,7 +135,7 @@ class Reference:
 
 
             if distance(self.char_q,char_quat) < 0.05: #0.05 rad is around 3.18°
-                os.rename(return_path,self.refdir_path+"/{0}".format(self.abb)+"_ori.xyz")
+                os.rename(return_path,self.refdir_path+"/{0}".format(self.solv_abb)+"_ori.xyz")
 
                 # also for the identity there is an entry in eq_dict. This facilitates the quaternion cleanup
                 # in _find_avg_solvent.
@@ -223,49 +205,3 @@ class Reference:
             write(self.xyz_path, self._makedir("quats")+"/avg_at_voxel_{0}", new_coords, voxel)
 
         return self.cmol.labels, new_coords
-
-
-
-
-
-class Solvent:
-    """
-    This class serves two purposes:
-    1) A Solvent object is created which gets all the data from the datafile created by Analysis_Febiss.h/cpp.
-       This object makes use of the attributes data, coords (for the COM coords) and values and the methods sort_by_energy, get_coord_set and get_energy.
-    2) Solvent objects are also created for each solvent selected from the interactive barplot.
-       These objects make use of the attribute coords (for the COM coord),
-       quats (which are loaded from the gist-quats.dat file), elements and elem_coords (for the solvent atom coords).
-    """
-    def __init__(self, nvoxels = 0, ref_eww = 0):
-        self.data = [] #data (i.e. voxel x y z energy) is passed as 5-tuple
-        self.coords = [] #holds coords of COMs
-        self.values = [] #holds energy values of solvent molecules. needed for plotting
-        self.elements = [] #holds the elements of the solvent to be placed
-        self.quats = self._prep_dict(nvoxels) #holds all the quats from gist-quats.dat associated with. keys are voxel numbers
-        self.elem_coords = []
-        self.ref_eww = ref_eww
-
-    def sort_by_energy(self):
-        self.data = sorted(self.data, key=lambda tpl: tpl[-1],reverse=True)
-        with open('sorted_data.dat','w') as f:
-            for i in self.data:
-                f.write("{0} {1} {2} {3} {4}\n".format(i[0], i[1], i[2], i[3], i[4]))
-
-    def get_coord_set(self):
-        coord_list = []
-        for com in self.data:
-            coord_list.append((float(com[1]),float(com[2]),float(com[3]))) #TODO: Prone to ValueError.
-        self.coords = np.asarray(coord_list)
-
-    def get_energy(self): #TODO: merge with get_coord_set
-        for com in self.data:
-            self.values.append(float(com[-1])+self.ref_eww)  #TODO: Prone to ValueError
-
-    def _prep_dict(self, nvoxels):
-        quat_dict = {}
-        if nvoxels != 0:
-            for voxel in range(nvoxels):
-                quat_dict[voxel] = []
-        return quat_dict
-

@@ -7,8 +7,8 @@ See LICENSE for details
 """
 
 from typing import Union
-from ...utilities.structures import Solute, Solvent
-
+from febiss.structures.solvent import Solvent
+from febiss.structures.solute import Solute
 
 
 def write_pdb(pdb: str, structure: Union[Solute, Solvent], abb, solute: bool = False):

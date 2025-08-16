@@ -35,7 +35,7 @@ with open(path.join(here, 'requirements.txt')) as requirements_file:
                     if not line.startswith('#')]
 setup(
     name="Febiss",
-    version="1.9.7.2",
+    version="1.9.8",
     description="Tool to ease GIST analysis and display and select FEBISS solvents",
     long_description=readme,
     author="Miguel Steiner, Lukas Magenheim",
@@ -53,10 +53,12 @@ setup(
     ],
     packages=['febiss',
               'febiss.cli',
+              "febiss.gui",
               'febiss.plotting',
               'febiss.solvents',
               'febiss.utilities',
-              'febiss.utilities.io_handling'
+              'febiss.structures',
+              "febiss.cpptraj_interface",
               ],
     package_data={
         'febiss': [
@@ -68,9 +70,10 @@ setup(
     py_modules=[
         "febiss.plotting",
         "febiss.utilities",
+        'febiss.structures',
         "febiss.cli",
-        "febiss.gist",
-        "febiss.utilities.io_handling"
+        "febiss.gui",
+        "febiss.cpptraj_interface",
     ],
     entry_points={
         'console_scripts': [
