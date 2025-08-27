@@ -35,7 +35,7 @@ with open(path.join(here, 'requirements.txt')) as requirements_file:
                     if not line.startswith('#')]
 setup(
     name="Febiss",
-    version="1.9.8",
+    version="1.9.9",
     description="Tool to ease GIST analysis and display and select FEBISS solvents",
     long_description=readme,
     author="Miguel Steiner, Lukas Magenheim",
@@ -51,35 +51,35 @@ setup(
         "Intended Audience :: Science/Research",
         "Topic :: Scientific/Engineering :: Chemistry"
     ],
-    packages=['febiss',
-              'febiss.cli',
-              "febiss.gui",
-              'febiss.plotting',
-              'febiss.solvents',
-              'febiss.utilities',
-              'febiss.structures',
-              "febiss.cpptraj_interface",
+    packages=['Febiss',
+              'Febiss.cli',
+              "Febiss.gui",
+              'Febiss.plotting',
+              'Febiss.solvents',
+              'Febiss.utilities',
+              'Febiss.structures',
+              'Febiss.cpptraj_interface',
               ],
     package_data={
-        'febiss': [
+        'Febiss': [
             'manual/*',
             'solvents/*.mol2',
             'solvents/TP3.xyz'
         ]
     },
     py_modules=[
-        "febiss.plotting",
-        "febiss.utilities",
-        'febiss.structures',
-        "febiss.cli",
-        "febiss.gui",
-        "febiss.cpptraj_interface",
+        'Febiss.plotting',
+        'Febiss.utilities',
+        'Febiss.structures',
+        'Febiss.cli',
+        'Febiss.gui',
+        'Febiss.cpptraj_interface',
     ],
     entry_points={
         'console_scripts': [
-            'febiss = febiss.cli.febiss:main',
-            'febiss_setup = febiss.cli.febiss_setup:main',
-            'febiss_settings = febiss.cli.febiss_settings:main',
+            'febiss = Febiss.cli.febiss:main',
+            'febiss_setup = Febiss.cli.febiss_setup:main',
+            'febiss_settings = Febiss.cli.febiss_settings:main',
         ],
     },
 )

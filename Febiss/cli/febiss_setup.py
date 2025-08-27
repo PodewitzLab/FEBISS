@@ -13,7 +13,7 @@ from collections import OrderedDict
 
 import yaml
 
-from febiss import SETTINGS_FILE
+from Febiss import SETTINGS_FILE
 
 default = OrderedDict({'installation_path': '~/.dependencies_febiss',
            'github_owner': 'podewitzlab',

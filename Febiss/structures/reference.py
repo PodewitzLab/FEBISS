@@ -10,9 +10,9 @@ import os
 import shutil
 import typing
 
-from febiss.structures.mol2_to_xyz import converter
-from febiss.structures.write_xyz import write_xyz as write
-from febiss.structures.quat_handling import *
+from Febiss.structures.mol2_to_xyz import converter
+from Febiss.structures.write_xyz import write_xyz as write
+from Febiss.structures.quat_handling import *
 from pymatgen.core import Molecule
 from pymatgen.symmetry import analyzer as ana
 import quaternion as quat

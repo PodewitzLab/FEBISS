@@ -17,13 +17,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sys
 
-from febiss.cpptraj_interface.gist import GistAnalyser
+from Febiss.cpptraj_interface.gist import GistAnalyser
 from ..structures.solvent import Solvent
 from ..structures.reference import Reference
 from ..structures.solute import Solute
-from febiss.structures.write_pdb import write_pdb
-from febiss.utilities.check_settings import Checker
-from febiss.utilities.input import Input
+from Febiss.structures.write_pdb import write_pdb
+from Febiss.utilities.check_settings import Checker
+from Febiss.utilities.input import Input
 from .rdf import ButtonActions
 
 
@@ -310,8 +310,8 @@ class Plot(Checker):
 
         # set tics and limits
         plt.xticks(np.arange(0, xmax + xstep, step=xstep))
-        if ymin == ymax == 0.0: #TODO: Change to try-except to catch if ymax == ymin.
-            ymax = 1
+        if abs(ymax-ymin) < 1:
+            ymax = ymin + 1
             ystep = 0.1
         plt.yticks(np.arange(ymin, ymax + ystep, step=ystep))
         ax.set_ylim([ymin, ymax])
@@ -463,7 +463,7 @@ class Plot(Checker):
 
         self._selected_solvents.extend(sorted(set([x - 1 for x in sel_solv])))
 
-        if len(self._drs) != 0: #that is the case when there is no barplot due to predefined solvent selection
+        if len(self._drs) != 0: #0 is only the case when there is no barplot due to predefined solvent selection
             for dr in self._drs:
                 try:
                     if int(dr.rect.xy[0]) in self._selected_solvents:
@@ -517,11 +517,11 @@ class Plot(Checker):
         # TODO: Check if _selected_solvents order coincides with order of solvent.coord entries,
         #  i.e. are solvent.coord entries sorted wrt their energy
         for select in self._selected_solvents:
-            voxel = int(solvent.data[select][0]) #TODO: Type conversion prone to ValueError
+            voxel = int(solvent.data[select][0])
             quats = solvent.quats[voxel]
             grid_point = (float(solvent.data[select][1]),
                           float(solvent.data[select][2]),
-                          float(solvent.data[select][3])) #TODO: Prone to ValueError.
+                          float(solvent.data[select][3]))
 
             #This finally determines the solvent to be placed.
             elements, coords = reference._find_avg_solvent(voxel, quats, grid_point)

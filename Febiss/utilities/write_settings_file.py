@@ -7,8 +7,8 @@ See LICENSE for details
 """
 
 import os
-from febiss.cpptraj_interface.gist import GistAnalyser
-from febiss.plotting.display import Plot
+from Febiss.cpptraj_interface.gist import GistAnalyser
+from Febiss.plotting.display import Plot
 def write_settings_file(analyser:GistAnalyser, display:Plot):
     # write all analysis options
     settings_file = 'all-settings.yaml'

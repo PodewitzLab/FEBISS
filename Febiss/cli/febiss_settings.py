@@ -10,8 +10,8 @@ import sys
 import os
 from ..solvents import NUMBER_DICT, SOLVENT_DICT
 from ..utilities.colorgen import Color
-from febiss.utilities.input import Input
-from febiss.utilities.write_settings_file import write_settings_file
+from Febiss.utilities.input import Input
+from Febiss.utilities.write_settings_file import write_settings_file
 
 
 def help_message():
@@ -47,7 +47,7 @@ def pyconsolv_name():
     return NUMBER_DICT[solv_num] #name of the solvent
 
 def gui(mode: int):
-    from febiss.gui.gui_behavior import Window
+    from Febiss.gui.gui_behavior import Window
     from PyQt6.QtWidgets import QApplication
 
     # Create the application
@@ -100,7 +100,7 @@ def cli():
     else:
         solv_file = os.path.abspath(os.path.join(__file__, "../../solvents/{0}".format(SOLVENT_DICT[solv_name][1])))
 
-    from febiss.cpptraj_interface.gist import GistAnalyser
+    from Febiss.cpptraj_interface.gist import GistAnalyser
     from ..plotting.display import Plot
     # the arguments are necessary in the init, otherwise exception
     analyser = GistAnalyser(**{

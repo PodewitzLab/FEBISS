@@ -10,14 +10,14 @@ import os
 import sys
 import subprocess
 
-from febiss.utilities import ELEMENT_DICT
+from Febiss.utilities import ELEMENT_DICT
 from collections import OrderedDict
-from febiss.utilities.check_settings import Checker
-from febiss.utilities.input import Input
-from febiss.cpptraj_interface.write_cpptraj_files import write_gist_cpptraj_file, write_rdf_input_files
-from febiss.utilities.write_grid import write_out_gist_grid
+from Febiss.utilities.check_settings import Checker
+from Febiss.utilities.input import Input
+from Febiss.cpptraj_interface.write_cpptraj_files import write_gist_cpptraj_file, write_rdf_input_files
+from Febiss.utilities.write_grid import write_out_gist_grid
 
-from febiss import SETTINGS, SETTINGS_FILE
+from Febiss import SETTINGS, SETTINGS_FILE
 
 
 class MissingSettingException(Exception):
@@ -207,6 +207,9 @@ class GistAnalyser(Checker):
             else:
                 print("You've just discovered a bug (required formats). Please reach out to us!")
                 sys.exit()
+
+        if len(set([self.rigid_atom_0, self.rigid_atom_1, self.rigid_atom_2])) < 3:
+            self.err_string += '\n\t-The rigid atoms must be unique!'
 
     def _write_variable(self, f, variable):
         # assumes same value three times if single value

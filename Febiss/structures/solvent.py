@@ -12,9 +12,9 @@ import typing
 
 import numpy
 
-from febiss.structures.mol2_to_xyz import converter
-from febiss.structures.write_xyz import write_xyz as write
-from febiss.structures.quat_handling import *
+from Febiss.structures.mol2_to_xyz import converter
+from Febiss.structures.write_xyz import write_xyz as write
+from Febiss.structures.quat_handling import *
 from pymatgen.core import Molecule
 from pymatgen.symmetry import analyzer as ana
 import quaternion as quat
@@ -47,12 +47,12 @@ class Solvent:
     def get_coord_set(self):
         coord_list = []
         for com in self.data:
-            coord_list.append((float(com[1]),float(com[2]),float(com[3]))) #TODO: Prone to ValueError.
+            coord_list.append((float(com[1]),float(com[2]),float(com[3])))
         self.coords = np.asarray(coord_list)
 
-    def get_energy(self): #TODO: merge with get_coord_set
+    def get_energy(self):
         for com in self.data:
-            self.values.append(float(com[-1])+self.ref_evv)  #TODO: Prone to ValueError
+            self.values.append(float(com[-1])+self.ref_evv)
 
     def _prep_dict(self, nvoxels):
         quat_dict = {}

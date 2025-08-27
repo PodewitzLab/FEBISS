@@ -13,13 +13,13 @@ import sys
 import quaternion
 import numpy as np
 
-from febiss.structures.solvent import Solvent
-from febiss.structures.reference import Reference
-from febiss.structures.solute import Solute
-from febiss.utilities.write_settings_file import write_settings_file
-from febiss.utilities.write_style_file import write_style_file
-from febiss.cpptraj_interface.read_settings import read_settings
-from febiss.utilities.input import Input
+from Febiss.structures.solvent import Solvent
+from Febiss.structures.reference import Reference
+from Febiss.structures.solute import Solute
+from Febiss.utilities.write_settings_file import write_settings_file
+from Febiss.utilities.write_style_file import write_style_file
+from Febiss.cpptraj_interface.read_settings import read_settings
+from Febiss.utilities.input import Input
 
 
 def help_message():
@@ -30,7 +30,7 @@ def help_message():
     print("To execute CPPTRAJ, it has to be first setup via 'setup_febiss'.\n")
     sys.exit()
 
-def read_data(febiss_file, solute: Solute, solvent: Solvent): #TODO: pass solute.pdb as variable to avoid hardcoding problems
+def read_data(febiss_file, solute: Solute, solvent: Solvent):
     """
     Reads in febiss file (default febiss.dat) and solute_file (default: solute.pdb) and assigns the values to passed Solute and
     Solvent objects
@@ -47,7 +47,7 @@ def read_data(febiss_file, solute: Solute, solvent: Solvent): #TODO: pass solute
             line_entries = [float(entry) for entry in line_entries]
             line_entries[-1] = -line_entries[-1]
             solvent.data.append(tuple(line_entries))
-    solvent.sort_by_energy() #TODO: catch case where several solvents occupy the same voxel which should not be the case
+    solvent.sort_by_energy() #assuming GIST worked and one voxel is occupied not more than once
     solvent.get_coord_set()
     solvent.get_energy()
 
@@ -74,7 +74,7 @@ def get_settings():
 
     # GUI path
     if len(sys.argv) == 1:
-        from .febiss_settings import gui
+        from Febiss.cli.febiss_settings import gui
         analyser, display = gui(1)
         febiss_file = write_settings_file(analyser, display)
         analyser, display = read_settings(febiss_file) # Reread to be consistent with the way FEBISS works via the CLI.

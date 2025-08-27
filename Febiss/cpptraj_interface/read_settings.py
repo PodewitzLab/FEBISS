@@ -8,8 +8,8 @@ See LICENSE for details
 
 import yaml
 import sys
-from febiss.cpptraj_interface.gist import GistAnalyser
-from febiss.plotting.display import Plot
+from Febiss.cpptraj_interface.gist import GistAnalyser
+from Febiss.plotting.display import Plot
 
 def read_settings(febiss_file):
     with open(febiss_file, 'r') as yamlfile:

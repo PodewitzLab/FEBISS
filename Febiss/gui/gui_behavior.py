@@ -11,9 +11,9 @@ import sys
 import os
 from .gui import Ui_Dialog
 from PyQt6.QtWidgets import QDialog, QFileDialog
-from febiss.cpptraj_interface.gist import GistAnalyser
-from febiss.plotting.display import Plot
-from febiss.solvents import SOLVENT_DICT
+from Febiss.cpptraj_interface.gist import GistAnalyser
+from Febiss.plotting.display import Plot
+from Febiss.solvents import SOLVENT_DICT
 
 class Window(QDialog):
 

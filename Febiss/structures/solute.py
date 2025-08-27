@@ -6,7 +6,7 @@ Copyright Technische Universität Wien, Institute of Materials Chemistry, Podewi
 See LICENSE for details
 """
 
-from febiss.structures.quat_handling import *
+from Febiss.structures.quat_handling import *
 
 
 class Solute:
@@ -22,9 +22,9 @@ class Solute:
     def get_coord_set(self):
         coord_list = []
         for atom in self.data:
-            coord_list.append((float(atom[-6]),float(atom[-5]),float(atom[-4]))) #TODO: Prone to ValueError
+            coord_list.append((float(atom[-6]),float(atom[-5]),float(atom[-4])))
         self.coords = np.asarray(coord_list)
 
-    def get_elements(self): #TODO: merge with get_coord_set since the loop is the same
+    def get_elements(self):
         for atom in self.data:
             self.elements.append(atom[-1])
