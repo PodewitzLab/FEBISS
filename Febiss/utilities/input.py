@@ -32,7 +32,7 @@ class Input:
 
     def __assertion(self):
         try:
-            self.input = self.form(self.input + ": ")
+            self.input = self.form(self.input)
             self.reassure()
         except ValueError:
             print("The input does not fit the requirements, must be " + str(self.form.__name__))

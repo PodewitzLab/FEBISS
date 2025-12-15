@@ -94,7 +94,7 @@ class GistAnalyser(Checker):
                     if element.lower() == 'center':
                         self._rdf_names['center']='Center'
                     else:
-                        self._rdf_names[ELEMENT_DICT[element.lower()][0]]=ELEMENT_DICT[element.lower()][1]
+                        self._rdf_names[element]=ELEMENT_DICT[element.lower()][1]
                 except KeyError:
                     not_recognized.append(element)
             if len(not_recognized) != 0:

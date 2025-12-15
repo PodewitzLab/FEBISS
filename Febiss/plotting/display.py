@@ -163,7 +163,7 @@ class Plot(Checker):
     def _determine_hetero_elements(self, solute: Solute):
         self.existing_elements = []
         for symbol in self._rdf_names.keys():
-            if symbol in solute.elements:
+            if symbol.lower() in [e.lower() for e in solute.elements]:
                 self.existing_elements.append(True)
             elif symbol == 'center':
                 self.existing_elements.append(True)
