@@ -45,11 +45,11 @@ def write_gist_cpptraj_file(analyzer):  # this creates the content for cpptraj.i
         f.write('run\n')
 
         #additional write_out of first frame and solute
-        f.write('center :1 origin\n')
+        f.write('center ' + analyzer.solute_residues + ' origin\n')
         f.write('trajout first_frame.pdb onlyframes 1\n')
         f.write('run\n')
-        f.write('center :1 origin\n')
-        f.write('strip :{0}\n'.format(analyzer.solv_abb))
+        f.write('center ' + analyzer.solute_residues + ' origin\n')
+        f.write('strip !(' + analyzer.solute_residues + ')\n')
         f.write('trajout solute.pdb onlyframes 1\n')
         f.write('run')
 

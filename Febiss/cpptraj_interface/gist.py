@@ -73,7 +73,7 @@ class GistAnalyser(Checker):
             'grid_center': ('format', '\([0-9]+.[0-9]+, [0-9]+.[0-9]+, [0-9]+.[0-9]+\)|(?i)None|^$'),
             'grid_spacing': ('type', 'float'),
             'grid_lengths': ('format', '\([0-9]+, [0-9]+, [0-9]+\)'),
-            'solute_residues': ('format', '[a-zA-Z0-9:@]+'),
+            'solute_residues': ('format', '[a-zA-Z0-9:@\-]+'),
             'gist_cpptraj_command_file': ('format', '[a-zA-Z0-9:@\._\-]+\.in'),
             'gist_out_file': ('format', '[a-zA-Z0-9:@\._\-]+\.dat'),
             'gist_grid_file': ('format', '[a-zA-Z0-9:@\._\-]+\.xyz'),
