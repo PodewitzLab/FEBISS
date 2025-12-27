@@ -35,7 +35,7 @@ with open(path.join(here, 'requirements.txt')) as requirements_file:
                     if not line.startswith('#')]
 setup(
     name="Febiss",
-    version="1.9.9.2",
+    version="1.9.9.3",
     description="Tool to ease GIST analysis and display and select FEBISS solvents",
     long_description=readme,
     author="Miguel Steiner, Lukas Magenheim",

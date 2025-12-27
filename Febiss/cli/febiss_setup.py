@@ -15,13 +15,12 @@ import yaml
 
 from Febiss import SETTINGS_FILE
 
-default = OrderedDict({'installation_path': '~/.dependencies_febiss',
+default = {'installation_path': '~/.dependencies_febiss',
            'github_owner': 'podewitzlab',
            'github_repo': 'cpptraj.git',
            'github_branch': 'master',
            'openmp': True,
-           'cuda': True})
-
+           'cuda': True}
 
 def help_message():
     print('This setup program installs this dependency for you and sets the global variables.')
@@ -31,7 +30,7 @@ def help_message():
     print('If you want to install the needed CPPTRAJ version with this program, you can give a yaml file\n'
           'with the wanted installation path and CPPTRAJ specifications.')
     print('An example with all possible settings:\n')
-    print(yaml.dump(default))
+    print(yaml.dump(default, sort_keys=False))
     print("If you want to use these default options, you can also give 'default' as an argument to the program.\n")
     print("\nPlease also make sure you have these packages installed: gcc g++ gfortran curl wget zlib1g-dev automake")
     sys.exit()
