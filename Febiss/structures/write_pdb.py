@@ -11,15 +11,18 @@ from Febiss.structures.solvent import Solvent
 from Febiss.structures.solute import Solute
 
 
-def write_pdb(pdb: str, structure: Union[Solute, Solvent], abb, solute: bool = False):
+def write_pdb(pdb: str, structure: Union[Solute, Solvent], abb, solute: bool = False, atomnum: int = 1):
     """
     Function that writes the microsolvated structure to a PDB file.
     :param pdb: Name of the pdb-file to be written into.
     :param structure: Either a Solute or a Solvent object.
     :param abb: Holds the three letter abbreviation of the solvent (e.g. CL3 for chloroform)
     :param solute: Bool variable to distinguish whether the solute or solvent molecules get written.
+    :param atomnum: Number of atoms in solvent molecule.
     :return: No actual return but writes PDB file that holds the microsolvated structure.
     """
+    solventcounter = 1  # used to enumerate the individual solvents that are placed
+
     if solute:
         atomcounter = 1
         f = open(pdb, 'w')
@@ -43,7 +46,9 @@ def write_pdb(pdb: str, structure: Union[Solute, Solvent], abb, solute: bool = F
         if solute:
             j.append('1'.rjust(4))  # resnum
         else:
-            j.append('2'.rjust(4))  # resnum
+            if count % atomnum == 0: #this evaluates to True for the first atom of the first solvent, thus solvent residues start with 2. This is intended since the solute's number is 1.
+                solventcounter += 1
+            j.append(str(solventcounter).rjust(4))  # resnum
         j.append(str('%8.3f' % (float(atom[0]))).rjust(8))  # x
         j.append(str('%8.3f' % (float(atom[1]))).rjust(8))  # y
         j.append(str('%8.3f' % (float(atom[2]))).rjust(8))  # z

@@ -15,6 +15,7 @@ from Febiss.structures.write_xyz import write_xyz as write
 from Febiss.structures.quat_handling import *
 from pymatgen.core import Molecule
 from pymatgen.symmetry import analyzer as ana
+from Febiss.utilities.colorgen import Color
 import quaternion as quat
 
 
@@ -40,19 +41,25 @@ class Reference:
 
         self.refdir_path = None #Gets defined in _process_equivalent_structures(). Contains path to parent directory.
         self.mol = Molecule.from_file(self.xyz_path) #pymatgen interface
-        self.cmol = self.mol.get_centered_molecule()
 
         self.rigid_atom_idx_0 = rigid_atom_0
         self.rigid_atom_idx_1 = rigid_atom_1
         self.rigid_atom_idx_2 = rigid_atom_2
 
         if self.com:
+            self.cmol = self.mol.get_centered_molecule()
+        else:
+            self.cmol = self.mol.translate_sites(vector=(self.mol.cart_coords[self.rigid_atom_idx_0])*(-1))
+
+        if self.com:
             print("Using rigidatoms {0} and {1} for quaternion determination!".format(self.rigid_atom_idx_1,
                                                                                       self.rigid_atom_idx_2))
         else:
-            print("Using rigidatoms {0}, {1} and {2} for quaternion determination!".format(self.rigid_atom_idx_0,
-                                                                                           self.rigid_atom_idx_1,
-                                                                                           self.rigid_atom_idx_2))
+            print(Color.RED +
+                  "\nWARNING: COM is set to False, rigidatoms {0}, {1} and {2} are used for quaternion determination. "
+                  .format(self.rigid_atom_idx_0, self.rigid_atom_idx_1, self.rigid_atom_idx_2)
+                  + "Please make sure that rigid_atom_0 stays invariant for all rotational symmetry operations!\n"
+                  + Color.END)
 
         self.char_q = calc_quats(self.cmol, self.rigid_atom_idx_0, self.rigid_atom_idx_1, self.rigid_atom_idx_2)
 
@@ -63,12 +70,6 @@ class Reference:
         # 3) the characteristic quat for the orientation of the molecule as tuple per symm_op
         self.eq_dict = {}
         self._process_equivalent_structures(True)
-
-        #post placement
-        self.elements = []
-        self.atoms = []
-        self.values = []
-        self.all_values = []
 
     def _makedir(self, path: str) -> str:
         """used primarily to create a folder that contains the reference structure
@@ -190,16 +191,8 @@ class Reference:
 
         #step 3) and 4)
         qt = q_avg * inv(self.char_q) #quaternion for rotation of original orientation to orientation described by q_avg
+
         new_coords = new_coord_gen(self.cmol, qt, np.array(grid_point))
-
-        if not self.com: #in the nocom case, we translate the com by the coordinate of the rigid_atom_0
-            if self.verbose:
-                print('new coords before = {0}'.format(new_coords))
-            new_coords = list(np.array(new_coords) + (np.array(grid_point)-np.array(new_coords[0])))
-            if self.verbose:
-                print('new coords after = {0}'.format(new_coords))
-                print('grid point = {0}'.format(grid_point))
-
 
         if self.verbose:
             write(self.xyz_path, self._makedir("quats")+"/avg_at_voxel_{0}", new_coords, voxel)

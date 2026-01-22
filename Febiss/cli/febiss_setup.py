@@ -9,7 +9,7 @@ See LICENSE for details
 import os
 import subprocess
 import sys
-from collections import OrderedDict
+from Febiss.utilities.colorgen import Color
 
 import yaml
 
@@ -103,7 +103,7 @@ def main():
 
     # save settings in rc file in home
     if os.path.exists(SETTINGS_FILE):
-        print('WARNING: Overwriting existing rc file.')
+        print(Color.RED + 'WARNING: Overwriting existing rc file.' + Color.END)
         while True:
             inp = input("Are you sure? [y/n] ")
             if inp.strip().lower() in ['y', 'yes']:

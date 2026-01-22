@@ -18,13 +18,14 @@ import numpy as np
 import sys
 
 from Febiss.cpptraj_interface.gist import GistAnalyser
-from ..structures.solvent import Solvent
-from ..structures.reference import Reference
-from ..structures.solute import Solute
+from Febiss.structures.solvent import Solvent
+from Febiss.structures.reference import Reference
+from Febiss.structures.solute import Solute
 from Febiss.structures.write_pdb import write_pdb
 from Febiss.utilities.check_settings import Checker
 from Febiss.utilities.input import Input
-from .rdf import ButtonActions
+from Febiss.utilities.colorgen import Color
+from Febiss.plotting.rdf import ButtonActions
 
 
 class Plot(Checker):
@@ -72,7 +73,7 @@ class Plot(Checker):
                 else:
                     self.__dict__[k] = v
             else:
-                print('WARNING: Did not recognize key: ' + str(k))
+                print(Color.RED + 'WARNING: Did not recognize key: ' + str(k) + Color.END)
 
     def gui(self, analyser: GistAnalyser, solute: Solute, solvent: Solvent, reference: Reference) -> str:
         self._rdf_names = analyser._rdf_names
@@ -530,8 +531,8 @@ class Plot(Checker):
             selected_solvent.coords.extend(coords)
             selected_solvent.values.extend([values]*len(elements))
 
-        write_pdb(filename, selected_solvent, abb, solute=False)
-        print('Your microsolvated structure was written to: ' + filename)
+        write_pdb(filename, selected_solvent, abb, solute=False, atomnum=reference.mol.num_sites)
+        print(Color.GREEN + '\nYour microsolvated structure was written to: ' + filename + Color.END + '\n')
         return filename
 
 

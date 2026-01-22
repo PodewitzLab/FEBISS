@@ -16,7 +16,7 @@ from Febiss.utilities.check_settings import Checker
 from Febiss.utilities.input import Input
 from Febiss.cpptraj_interface.write_cpptraj_files import write_gist_cpptraj_file, write_rdf_input_files
 from Febiss.utilities.write_grid import write_out_gist_grid
-
+from Febiss.utilities.colorgen import Color
 from Febiss import SETTINGS, SETTINGS_FILE
 
 
@@ -63,10 +63,6 @@ class GistAnalyser(Checker):
                     "The setting " + str(key) + " is required for the GIST analysis, but was not given.")
         self.__dict__.update((key, kwargs[key]) for key in self.required_keys.keys())
 
-        if self.com:
-            self.__dict__['rigid_atom_0'] = -1
-
-
         #set allowed keys
         self.allowed_keys = OrderedDict({
             'frame_selection': ('format', '[0-9]+ [0-9]+ [0-9]+|(?i)None|^$'),
@@ -109,7 +105,7 @@ class GistAnalyser(Checker):
 
     def perform_gist_analysis(self):
         if self.check_path('febiss.dat'):
-            print("\nWARNING: 'febiss.dat' is already present in directory. ")
+            print(Color.RED + "\nWARNING: 'febiss.dat' is already present in directory. " + Color.END)
 
             if not Input("Do you want to analyze the trajectory again? [y/n]").yn():
                 print("Skipping analysis and using existing data.")
@@ -125,7 +121,7 @@ class GistAnalyser(Checker):
     def perform_rdf_analysis(self):
         if len(self._rdf_names) != 0:
             if self.check_path('rdf*dat'):
-                print("\nWARNING: Found some RDF data in directory. ")
+                print(Color.RED + "\nWARNING: Found some RDF data in directory. " + Color.END)
 
                 if not Input("Do you want to calculate the RDFs again? [y/n]").yn():
                     print("Skipping analysis and using existing data.")
@@ -210,6 +206,9 @@ class GistAnalyser(Checker):
 
         if len(set([self.rigid_atom_0, self.rigid_atom_1, self.rigid_atom_2])) < 3:
             self.err_string += '\n\t-The rigid atoms must be unique!'
+
+        if (self.com and self.rigid_atom_0 != -1) or (not self.com and self.rigid_atom_0 == -1):
+            self.err_string += '\n\t-If com is set to true, rigid_atom_0 has to be -1 and vice versa!'
 
     def _write_variable(self, f, variable):
         # assumes same value three times if single value

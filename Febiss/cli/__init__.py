@@ -8,7 +8,7 @@ See LICENSE for details
 
 from ..utilities.colorgen import Color
 
-version = "1.9.9.3"
+version = "1.9.9.4"
 print(Color.GREEN + r"""
         ______ ______ ____   ____ _____ _____
        / ____// ____// __ ) /  _// ___// ___/

@@ -27,7 +27,7 @@ NUMBER_DICT = OrderedDict({
 })
 
 SOLVENT_DICT = {
-    #Format: Solvent name: (Abbreviation, Solvent file, Rigid Atoms, Reference Density, Reference Evv)
+    #Format: Solvent name: (Abbreviation, Solvent file, Rigid Atoms (idx 1, idx 0, idx 2), Reference Density, Reference Evv)
     #These solvents are taken from PyConSolv (https://github.com/PodewitzLab/PyConSolv/tree/e893eb0da780cdd7205f5f94433a599119f1b5b5/src/PyConSolv/solvents)
 
     'Acetonitrile': ('ACN', 'ACN.mol2', (3, 1, 0), 0.0121, -11.51),

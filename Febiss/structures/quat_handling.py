@@ -267,9 +267,12 @@ def new_coord_gen(mol:Molecule, q:quat.quaternion,t: np.ndarray = np.array([0,0,
     q = unity(q)
     new_coords = []
     for m in range(len(mol.cart_coords)):
-        q_coord = unity(vec_to_quat(mol.cart_coords[m]))
-        q_coord_trans = unity(q * q_coord * inv(q))
-        new_coords.append(list(np.array(vec_part(q_coord_trans))+t))
+        if np.linalg.norm(mol.cart_coords[m]-np.array([0,0,0])) != 0:
+            q_coord = unity(vec_to_quat(mol.cart_coords[m]))
+            q_coord_trans = unity(q * q_coord * inv(q))
+            new_coords.append(list(np.array(vec_part(q_coord_trans))+t))
+        else:
+            new_coords.append(t)
     return new_coords
 
 def create_Q_matrix(list_of_q:list[quat.quaternion]):
