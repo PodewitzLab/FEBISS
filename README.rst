@@ -2,7 +2,7 @@
 Free Energy Based Identification of Solvation Sites (FEBISS)
 ============================================================
 
-A manual with detailed instructions on the installation and usage of FEBISS2 will be uploaded soon (2026-09-23).
+A manual with detailed instructions on the installation and usage of FEBISS2 will be uploaded soon (2026-09-23). If urgent, please write a message to lukas.magenheim[at]tuwien.ac.at.
 
 Installation
 ------------
