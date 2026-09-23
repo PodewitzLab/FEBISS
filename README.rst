@@ -1,5 +1,8 @@
+
 Free Energy Based Identification of Solvation Sites (FEBISS)
 ============================================================
+
+A manual with detailed instructions on the installation and usage of FEBISS2 will be uploaded soon (2026-09-23).
 
 Installation
 ------------
@@ -13,8 +16,6 @@ FEBISS can be installed using pip (pip3) once the repository has been cloned:
 
 A non super user can install the package using a virtual environment, or
 the ``--user`` flag.
-
-A manual with detailed instructions can be found in the Github repo.
 
 
 Prerequisites
