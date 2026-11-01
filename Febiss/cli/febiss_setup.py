@@ -17,8 +17,8 @@ from Febiss import SETTINGS_FILE
 
 default = {'installation_path': '~/.dependencies_febiss',
            'github_owner': 'podewitzlab',
-           'github_repo': 'cpptraj.git',
-           'github_branch': 'master',
+           'github_repo': 'cpptraj_20241209.git',
+           'github_branch': 'dev_lum',
            'openmp': True,
            'cuda': True}
 

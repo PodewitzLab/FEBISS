@@ -91,9 +91,12 @@ def cli():
         solv_name = 'Custom'
 
     #defining if com shall be used for binning
+    index = SOLVENT_DICT[solv_name][2][1]
     com = False
+
     if Input("\nDo you want to use the center of mass (COM) as central point of the solvent molecule? [y/n]").yn():
         com = True
+        index = -1
 
     if solv_name == 'Custom':
         solv_file = 'Choose File ...'
@@ -111,7 +114,7 @@ def cli():
         'solv_file': solv_file,
         'refdens': SOLVENT_DICT[solv_name][3],
         'ref_evv': SOLVENT_DICT[solv_name][4],
-        'rigid_atom_0': SOLVENT_DICT[solv_name][2][1],
+        'rigid_atom_0': index,
         'rigid_atom_1': SOLVENT_DICT[solv_name][2][0],
         'rigid_atom_2': SOLVENT_DICT[solv_name][2][2]
     })
